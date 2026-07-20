@@ -15,7 +15,7 @@
   "contributes": {
     "scripts": [
       {
-        "path": "./main.lua"
+        "path": "./src/main.lua"
       }
     ]
   }
