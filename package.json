@@ -1,7 +1,7 @@
 {
-  "name": "aseprite-heightmap-gen",
-  "displayName": "Heightmap Generator",
-  "description": "A tool for generating heightmaps from one or multiple layers.",
+  "name": "aseprite-texture-map-gen",
+  "displayName": "Texture Map Generator",
+  "description": "A tool for generating texture maps from one or multiple layers.",
   "version": "0.1.0",
   "author": {
     "name": "Rain",
