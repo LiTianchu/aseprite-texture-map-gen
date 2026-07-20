@@ -1,12 +1,18 @@
+local HeightMapGenerator = require("src.HeightMapGenerator")
+
 ---@param plugin Plugin
 function init(plugin)
-	print("Plugin initialized: " .. plugin.name)
+	plugin:newMenuGroup({
+		id = "texture_gen_menu",
+		title = "Texture Map Generator",
+		group = "edit_fx",
+	})
 	plugin:newCommand({
-		id = "NewCommand",
-		title = "My New Command",
-		group = "cel_popup_properties",
+		id = "generate_height_map",
+		title = "Generate Height Map",
+		group = "texture_gen_menu",
 		onclick = function()
-			print("My New Command executed!")
+			HeightMapGenerator:show_dialog(plugin)
 		end,
 		onenabled = function()
 			return true
