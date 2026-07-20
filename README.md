@@ -1,4 +1,4 @@
-## Aseprite Heighmap Generator Plugin  
+## Aseprite Texture Map Generator Plugin  
 
 ## Development  
 
