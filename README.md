@@ -10,11 +10,14 @@ git submodule update --init --recursive
 
 ## Packaging Extension File
 
-### On Linux Environment  
+### Build Script (Need Unix / Bash Environment)  
 
 `chmod +x ./build.sh && ./build.sh`
 
-### On Other Environments  
+### Manual Packaging Method  
 
 - Zip `src/`, `package.json`, and `LICENSE` into a `.zip` file and rename the file extension to `.aseprite-extension`
 - DO NOT zip the submodules in the `lib/` folder.
+
+## Using the Extension
+- In Aseprite, go to `Edit` > `Preferences` > `Extensions` and click `Add Extension`, then select the `texture-map-gen.aseprite-extension` file to install.
