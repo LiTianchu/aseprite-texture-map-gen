@@ -38,6 +38,7 @@ end
 ---@return number y
 ---@return number z
 function TextureMapUtils.sobel_normal(luminance_map, width, height, x, y, edge_strength)
+	-- sample the 3x3 neighborhood of the pixel at (x, y)
 	local top_left = sample_texture(luminance_map, width, height, x - 1, y - 1)
 	local top = sample_texture(luminance_map, width, height, x, y - 1)
 	local top_right = sample_texture(luminance_map, width, height, x + 1, y - 1)
@@ -47,7 +48,16 @@ function TextureMapUtils.sobel_normal(luminance_map, width, height, x, y, edge_s
 	local bottom = sample_texture(luminance_map, width, height, x, y + 1)
 	local bottom_right = sample_texture(luminance_map, width, height, x + 1, y + 1)
 
-	local gradient_x = top_left + 2 * left + bottom_left - top_right - 2 * right - bottom_right
+	-- horizontal Sobel operator Gx, shape:
+	-- -1 0 1
+	-- -2 0 2
+	-- -1 0 1
+	local gradient_x = -(top_left + 2 * left + bottom_left - top_right - 2 * right - bottom_right)
+
+	-- vertical Sobel operator Gy, shape:
+	--  1  2  1
+	--  0  0  0
+	-- -1 -2 -1
 	local gradient_y = top_left + 2 * top + top_right - bottom_left - 2 * bottom - bottom_right
 
 	local normal_x = gradient_x * edge_strength
@@ -55,6 +65,7 @@ function TextureMapUtils.sobel_normal(luminance_map, width, height, x, y, edge_s
 	local normal_z = 1
 	local length = math.sqrt(normal_x * normal_x + normal_y * normal_y + normal_z * normal_z)
 
+	-- normalize
 	return normal_x / length, normal_y / length, normal_z / length
 end
 
@@ -85,7 +96,7 @@ function TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
 	local luminance_map, alpha_map = image_to_luminance_texture(source)
 	local normal_map = Image(source.width, source.height, ColorMode.RGB)
 	local pixel_color = app.pixelColor
-	local direction = layer_shape == "Concave" and -1 or 1
+	local direction = layer_shape == "Concave" and 1 or -1
 
 	for y = 0, source.height - 1 do
 		for x = 0, source.width - 1 do
