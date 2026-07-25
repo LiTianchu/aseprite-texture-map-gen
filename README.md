@@ -1,6 +1,6 @@
 # Aseprite Texture Map Generator Plugin  
 
-An All-In-One Image Processing based texture map generator plugin for Aseprite, enables unified and easy 2D texture map creation pipelines.  
+An All-In-One Image Processing based texture map generator plugin for [Aseprite](https://github.com/aseprite/aseprite), enables unified and easy 2D texture map creation pipelines.  
 
 **Supported Features:**  
 
@@ -13,19 +13,22 @@ An All-In-One Image Processing based texture map generator plugin for Aseprite, 
 
 ## Building Extension File
 
-### Download this project, then use one of the following techniques  
+### Download this project, then use one of the following ways  
 
-**1. Build Script (Need Unix / Bash Environment:**
-`chmod +x ./build.sh && ./build.sh`
+**1. Build Script (Need Unix / Bash Environment):**  
 
-**2. Manual Method:**
+```
+chmod +x ./build.sh && ./build.sh
+```
+
+**2. Manual Method:**  
 
 - Zip `src/`, `package.json`, and `LICENSE` into a `.zip` file and rename the file extension to `.aseprite-extension`
 - DO NOT zip the submodules in the `lib/` folder.
 
 ## Installing the Extension
 
-- In Aseprite, go to `Edit` > `Preferences` > `Extensions` and click `Add Extension`, then select the `.aseprite-extension` file to install.
+- In **Aseprite**, go to `Edit` > `Preferences` > `Extensions` and click `Add Extension`, then select the `.aseprite-extension` file to install.
 
 ## Using the Extension
 
@@ -55,7 +58,7 @@ An All-In-One Image Processing based texture map generator plugin for Aseprite, 
 
 ## Development  
 
-After cloning the repository, run the following command to initialize the submodule for Aseprite lib definitions:  
+After cloning the repository, run the following command to initialize the submodule for [Aseprite Library](https://github.com/RampantDespair/Aseprite-Library) definitions:  
 
 ```
 git submodule update --init --recursive
@@ -88,3 +91,5 @@ your_path_to_aseprite_executable -b --script ./tests/test_normal_map.lua
 ```
 lua ./tests/test_normal_map.lua
 ```
+
+*Note: Make sure [Lua 5.4](https://www.lua.org/versions.html#5.4) is installed  
