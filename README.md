@@ -15,6 +15,17 @@
 - **Edge Height** controls edge intensity; higher values give a steeper edge.
 - **Regenerate** updates the last generated output layers in their original frame using the current Object Shape and Edge Height.
 
+### Height Map
+
+- Generate a height map from `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`.
+- Choose one input layer, or enable **Selected Layers Are Input** to use the image layers selected in the timeline.
+- Enable **Separate Generated Layers** for one `<layer name>_height` result per input, or disable it to render the selected inputs into one `Combined_height` layer.
+- Set **Treat Input As** to **Normal Map** to extract height directly from normal-map layers, or choose **Color** to generate normals from color luminance before slope extraction.
+- For color input, **Color Object Shape** switches between convex and concave normals, and **Keep Intermediate Normal Map** also inserts the generated `<layer name>_normal` or `Combined_normal` layer.
+- **Edge Intensity** controls the reconstructed height contrast; zero produces a flat, neutral-gray height map.
+- **Slope Iterations** controls how long slope extraction converges. It defaults to 64 and is capped at 256 to prevent excessively long generation.
+- **Regenerate** updates the last height outputs—and any kept intermediate normal outputs—in their original frame using the current Edge Intensity, Slope Iterations, and Color Object Shape when applicable.
+
 ## Development  
 
 After cloning the repository, run the following command to initialize the submodule for Aseprite lib definitions:  

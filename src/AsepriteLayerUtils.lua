@@ -77,10 +77,6 @@ function AsepriteLayerUtils.layer_options(sprite)
 	return options, option_layers
 end
 
-function AsepriteLayerUtils.render_layer(sprite, layer, frame_number)
-	return AsepriteLayerUtils.render_layers(sprite, { layer }, frame_number)
-end
-
 function AsepriteLayerUtils.render_layers(sprite, layers, frame_number)
 	local source = Image(sprite.width, sprite.height, ColorMode.RGB)
 	for _, layer in ipairs(layers) do

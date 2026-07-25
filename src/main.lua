@@ -16,7 +16,7 @@ function init(plugin)
 			HeightMapGenerator:show_dialog(plugin)
 		end,
 		onenabled = function()
-			return true
+			return app.sprite ~= nil
 		end,
 	})
 	plugin:newCommand({

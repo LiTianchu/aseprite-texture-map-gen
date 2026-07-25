@@ -1,56 +1,210 @@
-local HeightMapGenerator = {}
+local TextureMapGenerator = require("src.TextureMapGenerator")
+local TextureMapUtils = require("src.TextureMapUtils")
 
----@param plugin Plugin
-function HeightMapGenerator:show_dialog(plugin)
-	HeightMapGenerator.pref = plugin.preferences
+local DEFAULT_EDGE_STRENGTH = 1.0
+local DEFAULT_ITERATION_COUNT = 64
+local MAX_ITERATION_COUNT = 256
+local DEFAULT_INPUT_TYPE = "Normal Map"
+local INPUT_TYPES = { "Normal Map", "Color" }
+local DEFAULT_LAYER_SHAPE = "Convex"
+local LAYER_SHAPES = { "Convex", "Concave" }
 
-	local use_selected_layers = HeightMapGenerator.pref.use_selected_layers == nil and true
-		or HeightMapGenerator.pref.use_selected_layers
-
-	HeightMapGenerator.dialog_box = Dialog({
-		title = "Generate Height Map",
-		onclose = function()
-			HeightMapGenerator.pref.input_layer = HeightMapGenerator.dialog_box.data.input_layer_entry
-			HeightMapGenerator.pref.use_selected_layers = HeightMapGenerator.dialog_box.data.use_selected_layers_check
-		end,
-	})
-
-	HeightMapGenerator.dialog_box
-		:separator({ id = "separator_1", text = "Layers" })
-		:check({
-			id = "use_selected_layers_check",
-			label = "Use Selected Layers as Input",
-			selected = use_selected_layers,
-			onclick = function() end,
-		})
-		:entry({
-			id = "input_layer_entry",
-			label = "Input Layer",
-			text = HeightMapGenerator.pref.input_layer or "Input Layer Name",
-			enabled = not use_selected_layers,
-		})
-		:button({
-			id = "gen_height_map_btn",
-			text = "Start Generate!",
-			onclick = function()
-				HeightMapGenerator:generate_height_map()
-			end,
-		})
-
-	local window_bounds = Rectangle(100, 100, 300, 200)
-	HeightMapGenerator.dialog_box:show({
-		wait = false,
-		bounds = window_bounds,
-	})
+local function valid_option(value, options)
+	return TextureMapUtils.valid_layer_shape(value, options)
 end
 
-function HeightMapGenerator:generate_height_map()
-	print("Generating Height Map...")
-	local layers = app.range.layers
-	print("Layers: ", #layers)
-	for i,v in ipairs(layers) do
-		print(i, v)
+local function initial_settings(pref)
+	local edge_strength = tonumber(pref.height_edge_strength) or DEFAULT_EDGE_STRENGTH
+	if not TextureMapUtils.valid_strength(edge_strength) then
+		edge_strength = DEFAULT_EDGE_STRENGTH
 	end
+
+	local iteration_count = tonumber(pref.height_iteration_count) or DEFAULT_ITERATION_COUNT
+	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT) then
+		iteration_count = DEFAULT_ITERATION_COUNT
+	end
+
+	local input_type = pref.height_input_type
+	if not valid_option(input_type, INPUT_TYPES) then
+		input_type = DEFAULT_INPUT_TYPE
+	end
+
+	local layer_shape = pref.height_layer_shape
+	if not valid_option(layer_shape, LAYER_SHAPES) then
+		layer_shape = DEFAULT_LAYER_SHAPE
+	end
+
+	local dump_intermediate_normal_map = pref.height_dump_intermediate_normal_map
+	if dump_intermediate_normal_map == nil then
+		dump_intermediate_normal_map = false
+	end
+
+	return {
+		edge_strength = edge_strength,
+		iteration_count = iteration_count,
+		input_type = input_type,
+		layer_shape = layer_shape,
+		dump_intermediate_normal_map = dump_intermediate_normal_map,
+	}
 end
+
+local function read_dialog_settings(data)
+	local edge_strength = tonumber(data.edge_strength)
+	if not TextureMapUtils.valid_strength(edge_strength) then
+		return nil, "Edge Intensity must be zero or a positive number."
+	end
+
+	local iteration_count = tonumber(data.iteration_count)
+	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT) then
+		return nil, "Slope Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT .. "."
+	end
+
+	local input_type = data.height_input_type
+	if not valid_option(input_type, INPUT_TYPES) then
+		input_type = DEFAULT_INPUT_TYPE
+	end
+
+	local layer_shape = data.layer_shape
+	if not valid_option(layer_shape, LAYER_SHAPES) then
+		layer_shape = DEFAULT_LAYER_SHAPE
+	end
+
+	return {
+		edge_strength = edge_strength,
+		iteration_count = iteration_count,
+		input_type = input_type,
+		layer_shape = layer_shape,
+		dump_intermediate_normal_map = input_type == "Color" and data.dump_intermediate_normal_map == true,
+	}
+end
+
+local HeightMapGenerator = TextureMapGenerator.new({
+	title = "Generate Height Map",
+	display_name = "Height Map",
+	singular_name = "height map",
+	plural_name = "Height maps",
+	indefinite_name = "a height map",
+	layers_separator_id = "height_map_layers_separator",
+	actions_separator_id = "height_actions",
+	generate_button_id = "generate_height_map",
+	regenerate_button_id = "regenerate_height_map",
+	preference_keys = {
+		input_layer = "height_input_layer",
+		selected_layers_are_input = "height_selected_layers_are_input",
+		separate_layers = "height_separate_layers",
+	},
+	initial_settings = initial_settings,
+	read_dialog_settings = read_dialog_settings,
+	add_settings_widgets = function(generator, dialog_box, settings)
+		local color_input = settings.input_type == "Color"
+		dialog_box
+			:separator({ id = "height_input_interpretation", text = "Input Interpretation" })
+			:combobox({
+				id = "height_input_type",
+				label = "Treat Input As",
+				options = INPUT_TYPES,
+				option = settings.input_type,
+				onchange = function()
+					local is_color = dialog_box.data.height_input_type == "Color"
+					dialog_box:modify({
+						id = "dump_intermediate_normal_map",
+						enabled = is_color,
+					})
+					dialog_box:modify({
+						id = "layer_shape",
+						enabled = is_color,
+					})
+					generator:invalidate_regeneration()
+				end,
+			})
+			:check({
+				id = "dump_intermediate_normal_map",
+				text = "Keep Intermediate Normal Map",
+				selected = settings.dump_intermediate_normal_map,
+				enabled = color_input,
+				onclick = function()
+					generator:invalidate_regeneration()
+				end,
+			})
+			:separator({ id = "height_slope_extraction", text = "Slope Extraction" })
+			:combobox({
+				id = "layer_shape",
+				label = "Color Object Shape",
+				options = LAYER_SHAPES,
+				option = settings.layer_shape,
+				enabled = color_input,
+			})
+			:number({
+				id = "edge_strength",
+				label = "Edge Intensity (0 = flat)",
+				text = tostring(settings.edge_strength),
+				decimals = 2,
+			})
+			:number({
+				id = "iteration_count",
+				label = "Slope Iterations (1-" .. MAX_ITERATION_COUNT .. ")",
+				text = tostring(settings.iteration_count),
+				decimals = 0,
+			})
+	end,
+	save_dialog_preferences = function(pref, data)
+		pref.height_input_type = data.height_input_type
+		pref.height_dump_intermediate_normal_map = data.dump_intermediate_normal_map
+		pref.height_layer_shape = data.layer_shape
+		pref.height_edge_strength = data.edge_strength
+		pref.height_iteration_count = data.iteration_count
+	end,
+	save_settings = function(pref, settings)
+		pref.height_input_type = settings.input_type
+		pref.height_dump_intermediate_normal_map = settings.dump_intermediate_normal_map
+		pref.height_layer_shape = settings.layer_shape
+		pref.height_edge_strength = settings.edge_strength
+		pref.height_iteration_count = settings.iteration_count
+	end,
+	job_metadata = function(settings)
+		return {
+			input_type = settings.input_type,
+			dump_intermediate_normal_map = settings.dump_intermediate_normal_map,
+		}
+	end,
+	create_outputs = function(source, settings, input_layers, is_combined, metadata)
+		local input_type = metadata and metadata.input_type or settings.input_type
+		local dump_intermediate_normal_map = settings.dump_intermediate_normal_map
+		if metadata then
+			dump_intermediate_normal_map = metadata.dump_intermediate_normal_map
+		end
+		local normal_image = source
+		local height_edge_strength = settings.edge_strength
+
+		if input_type == "Color" then
+			normal_image = TextureMapUtils.create_normal_image(source, settings.edge_strength, settings.layer_shape)
+			height_edge_strength = 1
+		else
+			dump_intermediate_normal_map = false
+		end
+
+		local base_name = is_combined and "Combined" or input_layers[1].name
+		local outputs = {
+			{
+				key = "primary",
+				name = base_name .. "_height",
+				image = TextureMapUtils.create_height_image(
+					normal_image,
+					height_edge_strength,
+					settings.iteration_count
+				),
+			},
+		}
+
+		if dump_intermediate_normal_map then
+			outputs[#outputs + 1] = {
+				key = "intermediate_normal",
+				name = base_name .. "_normal",
+				image = normal_image,
+			}
+		end
+		return outputs
+	end,
+})
 
 return HeightMapGenerator
