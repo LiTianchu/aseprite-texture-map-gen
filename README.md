@@ -39,7 +39,7 @@ Second, run the following command:
 chmod +x ./test.sh && ./test.sh
 ```
 
-#### Using Aseprite's Lua runtime to test
+#### Using Aseprite's Lua runtime
 
 ```
 your_path_to_aseprite_executable -b --script ./tests/test_normal_map.lua
