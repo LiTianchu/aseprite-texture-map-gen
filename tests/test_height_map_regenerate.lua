@@ -3,7 +3,7 @@ package.path = "./?.lua;" .. package.path
 -- This test should be checked using Asperite's Lua runtime for safety and compatibility
 -- To use Aseprite's Lua runtine, it requires Aseprite to be installed:
 -- To run:
--- "your_path_to_aseprite_binary" -b --script tests/test_normal_map_regenerate.lua
+-- "your_path_to_aseprite_binary" -b --script tests/test_height_map_regenerate.lua
 
 local AsepriteLayerUtils = require("src.AsepriteLayerUtils")
 local HeightMapGenerator = require("src.HeightMapGenerator")
@@ -144,10 +144,7 @@ assert(
 	single_generation.jobs[1].input_layers[1] == bottom_input,
 	"Single-layer mode should use the layer selected in the combobox"
 )
-assert(
-	single_generation.jobs[1].outputs[1].layer.name == "Bottom_height",
-	"Single-layer output should be named"
-)
+assert(single_generation.jobs[1].outputs[1].layer.name == "Bottom_height", "Single-layer output should be named")
 
 bottom_input:cel(1).image = horizontal_color
 top_input:cel(1).image = vertical_color

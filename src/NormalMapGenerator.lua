@@ -29,7 +29,7 @@ end
 local function read_dialog_settings(data)
 	local edge_strength = tonumber(data.edge_strength)
 	if not TextureMapUtils.valid_strength(edge_strength) then
-		return nil, "Edge Height must be zero or a positive number."
+		return nil, "Edge Intensity must be zero or a positive number."
 	end
 
 	local layer_shape = data.layer_shape
@@ -66,7 +66,7 @@ local NormalMapGenerator = TextureMapGenerator.new({
 			})
 			:number({
 				id = "edge_strength",
-				label = "Edge Height (0 = flat)",
+				label = "Edge Intensity (0 = flat)",
 				text = tostring(settings.edge_strength),
 				decimals = 2,
 			})

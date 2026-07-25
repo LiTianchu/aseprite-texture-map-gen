@@ -3,7 +3,7 @@ package.path = "./?.lua;" .. package.path
 -- This test should be checked using Asperite's Lua runtime for safety and compatibility
 -- To use Aseprite's Lua runtine, it requires Aseprite to be installed:
 -- To run:
--- "your_path_to_aseprite_binary" -b --script tests/test_normal_map_regenerate.lua
+-- "your_path_to_aseprite_binary" -b --script tests/test_height_map_dialog.lua
 
 local HeightMapGenerator = require("src.HeightMapGenerator")
 local MAX_ITERATION_COUNT = 256
@@ -99,14 +99,14 @@ HeightMapGenerator:show_dialog({
 
 assert(dialog, "The height-map dialog should be created")
 assert(
-	dialog.widgets_by_id.height_input_type.option == "Normal Map",
+	dialog.widgets_by_id.height_input_type.option == "Color",
 	"Normal Map should be the default input interpretation"
 )
 assert(
-	dialog.widgets_by_id.dump_intermediate_normal_map.enabled == false,
-	"Keeping an intermediate normal should start disabled for normal-map input"
+	dialog.widgets_by_id.dump_intermediate_normal_map.enabled == true,
+	"Keeping an intermediate normal should start enabled for color input"
 )
-assert(dialog.widgets_by_id.layer_shape.enabled == false, "Color Object Shape should only be available for color input")
+assert(dialog.widgets_by_id.layer_shape.enabled == true, "Color Object Shape should be available for color input")
 assert(dialog.widgets_by_id.iteration_count.decimals == 0, "Slope Iterations should be a whole-number input")
 assert(
 	dialog.widgets_by_id.iteration_count.label:find(tostring(MAX_ITERATION_COUNT), 1, true),

@@ -267,7 +267,7 @@ function TextureMapGenerator:generate_from_dialog()
 
 	app.transaction("Generate " .. self.config.display_name, function()
 		-- Aseprite shifts layers on top of inserted layers when inserting new layers
-		-- so need to process from last (top in stack) to first (bottom in stack)
+		-- need to process from last (top in stack) to first (bottom in stack)
 		-- so that layers below the generated outputs are not affected by the new layer's insertion
 		for index = #generated_jobs, 1, -1 do
 			local generated_job = generated_jobs[index]

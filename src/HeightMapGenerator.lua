@@ -4,8 +4,8 @@ local TextureMapUtils = require("src.TextureMapUtils")
 local DEFAULT_EDGE_STRENGTH = 1.0
 local DEFAULT_ITERATION_COUNT = 64
 local MAX_ITERATION_COUNT = 256
-local DEFAULT_INPUT_TYPE = "Normal Map"
-local INPUT_TYPES = { "Normal Map", "Color" }
+local DEFAULT_INPUT_TYPE = "Color"
+local INPUT_TYPES = { "Color", "Normal Map" }
 local DEFAULT_LAYER_SHAPE = "Convex"
 local LAYER_SHAPES = { "Convex", "Concave" }
 
@@ -97,28 +97,55 @@ local HeightMapGenerator = TextureMapGenerator.new({
 	read_dialog_settings = read_dialog_settings,
 	add_settings_widgets = function(generator, dialog_box, settings)
 		local color_input = settings.input_type == "Color"
+
+		local function update_input_type_controls()
+			local is_color = dialog_box.data.height_input_type == "Color"
+			dialog_box:modify({
+				id = "layer_shape",
+				enabled = is_color,
+			})
+			dialog_box:modify({
+				id = "dump_intermediate_normal_map",
+				enabled = is_color,
+			})
+		end
+
 		dialog_box
-			:separator({ id = "height_input_interpretation", text = "Input Interpretation" })
+			:separator({ id = "height_input_interpretation", text = "Input Format" })
 			:combobox({
 				id = "height_input_type",
-				label = "Treat Input As",
+				label = "Treat Layers As",
 				options = INPUT_TYPES,
 				option = settings.input_type,
+				hexpand = true,
 				onchange = function()
-					local is_color = dialog_box.data.height_input_type == "Color"
-					dialog_box:modify({
-						id = "dump_intermediate_normal_map",
-						enabled = is_color,
-					})
-					dialog_box:modify({
-						id = "layer_shape",
-						enabled = is_color,
-					})
+					update_input_type_controls()
 					generator:invalidate_regeneration()
 				end,
 			})
+			:newrow()
+			:separator({ id = "height_color_input_options", text = "Ground Truth Assumptions" })
+			:combobox({
+				id = "layer_shape",
+				label = "Object Shape",
+				options = LAYER_SHAPES,
+				option = settings.layer_shape,
+				enabled = color_input,
+				hexpand = true,
+			})
+			:newrow()
+			:number({
+				id = "edge_strength",
+				label = "Edge Intensity (0 = flat)",
+				text = tostring(settings.edge_strength),
+				decimals = 2,
+				hexpand = true,
+			})
+			:newrow()
+			:separator({ id = "height_slope_extraction", text = "Height Map Generation Settings" })
 			:check({
 				id = "dump_intermediate_normal_map",
+				label = "Intermediate Output",
 				text = "Keep Intermediate Normal Map",
 				selected = settings.dump_intermediate_normal_map,
 				enabled = color_input,
@@ -126,25 +153,13 @@ local HeightMapGenerator = TextureMapGenerator.new({
 					generator:invalidate_regeneration()
 				end,
 			})
-			:separator({ id = "height_slope_extraction", text = "Slope Extraction" })
-			:combobox({
-				id = "layer_shape",
-				label = "Color Object Shape",
-				options = LAYER_SHAPES,
-				option = settings.layer_shape,
-				enabled = color_input,
-			})
-			:number({
-				id = "edge_strength",
-				label = "Edge Intensity (0 = flat)",
-				text = tostring(settings.edge_strength),
-				decimals = 2,
-			})
+			:newrow()
 			:number({
 				id = "iteration_count",
-				label = "Slope Iterations (1-" .. MAX_ITERATION_COUNT .. ")",
+				label = "Iterations (1-" .. MAX_ITERATION_COUNT .. ")",
 				text = tostring(settings.iteration_count),
 				decimals = 0,
+				hexpand = true,
 			})
 	end,
 	save_dialog_preferences = function(pref, data)

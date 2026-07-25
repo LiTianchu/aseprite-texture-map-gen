@@ -1,30 +1,57 @@
 # Aseprite Texture Map Generator Plugin  
 
+An All-In-One Image Processing based texture map generator plugin for Aseprite, enables unified and easy 2D texture map creation pipelines.  
+
+**Supported Features:**  
+
+- Normal Map Generation
+- Height Map Generation
+- Specular Map Generation (Work In Progress...)
+- Emission Map Generation (Work In Progress...)
+
+<img src="demo/demo.png" alt="Demo" />
+
+## Building Extension File
+
+### Download this project, then use one of the following techniques  
+
+**1. Build Script (Need Unix / Bash Environment:**
+`chmod +x ./build.sh && ./build.sh`
+
+**2. Manual Method:**
+
+- Zip `src/`, `package.json`, and `LICENSE` into a `.zip` file and rename the file extension to `.aseprite-extension`
+- DO NOT zip the submodules in the `lib/` folder.
+
 ## Installing the Extension
 
-- In Aseprite, go to `Edit` > `Preferences` > `Extensions` and click `Add Extension`, then select the `texture-map-gen.aseprite-extension` file to install.
+- In Aseprite, go to `Edit` > `Preferences` > `Extensions` and click `Add Extension`, then select the `.aseprite-extension` file to install.
 
 ## Using the Extension
 
-### Normal Map
+### Normal Map Generation
 
-- Generate a normal map from `Edit` > `FX` > `Texture Map Generator` > `Generate Normal Map`.
-- Choose one input layer, or enable **Selected Layers Are Input** to use the image layers selected in the timeline.
-- Enable **Separate Generated Layers** for one `<layer name>_normal` result per input, or disable it to render the selected inputs into one `Combined_normal` layer.
-- **Object Shape** switches between convex and concave normals.
-- **Edge Height** controls edge intensity; higher values give a steeper edge.
-- **Regenerate** updates the last generated output layers in their original frame using the current Object Shape and Edge Height.
+- Menu Location: `Edit` > `FX` > `Texture Map Generator` > `Generate Normal Map`.
+- Options
+  - Layers
+    - Selected Layers Are Input: Default option treat selected layers in the timeline below as input layers, allow multiple layers
+    - Separate Generated Layers: When checked, each selected layer will generate it's own output with suffix `_normal` and insert on top of it, when unchecked, all selected layers will generate one single `Combined_normal` layer
+    - Input Layer: Only activated when `Selected layers Are Input` is unchecked, use a single layer selected from the dropdown as input layer, does not support multi-selection
+  - Ground Truth Assumptions
+    - Object Shape: Tells the generator whether it should treat the selected layer(s) as concave or convex shape
+    - Edge Intensity: Tells the generator how high the edges are, higher the value, the more ragged the generated output will be
 
-### Height Map
+### Height Map Generation
 
-- Generate a height map from `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`.
-- Choose one input layer, or enable **Selected Layers Are Input** to use the image layers selected in the timeline.
-- Enable **Separate Generated Layers** for one `<layer name>_height` result per input, or disable it to render the selected inputs into one `Combined_height` layer.
-- Set **Treat Input As** to **Normal Map** to extract height directly from normal-map layers, or choose **Color** to generate normals from color luminance before slope extraction.
-- For color input, **Color Object Shape** switches between convex and concave normals, and **Keep Intermediate Normal Map** also inserts the generated `<layer name>_normal` or `Combined_normal` layer.
-- **Edge Intensity** controls the reconstructed height contrast; zero produces a flat, neutral-gray height map.
-- **Slope Iterations** controls how long slope extraction converges. It defaults to 64 and is capped at 256 to prevent excessively long generation.
-- **Regenerate** updates the last height outputs—and any kept intermediate normal outputs—in their original frame using the current Edge Intensity, Slope Iterations, and Color Object Shape when applicable.
+- Menu Location: `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`.
+- Options
+  - Layers: Same as `Normal Map -> Layers`
+  - Input Format
+    - Treat Layers As: Tells the generator whether it should treat the input layers as `Color` or `Normal`, if switched to Normal map, the generator will treat the input as normal and infer the height from it
+  - Ground Truth Assumptions: Same as `Normal Map -> Ground Truth Assumptions`
+  - Height Map Generation Settings
+    - Intermediate Output: When `Input Format` is set to `Color`, the generator will need to generate normal map first as an intermediate texture, check to keep that intermediate output
+    - Iterations: Heightmap generation algorithm needs a few iterations to converge, heigher iteration gives more accurate result while taking longer time to compute
 
 ## Development  
 
@@ -61,14 +88,3 @@ your_path_to_aseprite_executable -b --script ./tests/test_normal_map.lua
 ```
 lua ./tests/test_normal_map.lua
 ```
-
-## Packaging Extension File
-
-### Build Script (Need Unix / Bash Environment)  
-
-`chmod +x ./build.sh && ./build.sh`
-
-### Manual Packaging Method  
-
-- Zip `src/`, `package.json`, and `LICENSE` into a `.zip` file and rename the file extension to `.aseprite-extension`
-- DO NOT zip the submodules in the `lib/` folder.
