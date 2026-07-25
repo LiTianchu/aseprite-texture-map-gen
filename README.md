@@ -36,7 +36,7 @@ chmod +x ./build.sh && ./build.sh
 
 Menu Location: `Edit` > `FX` > `Texture Map Generator` > `Generate Normal Map`  
 
-<img src="demo/normal_dialog" alt="Normal Map Generation Dialog"/>  
+<img src="demo/normal_dialog.png" alt="Normal Map Generation Dialog"/>  
 
 Options  
 
@@ -54,7 +54,7 @@ Options
 
 Menu Location: `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`  
 
-<img src="demo/height_dialog" alt="Height Map Generation Dialog"/>  
+<img src="demo/height_dialog.png" alt="Height Map Generation Dialog"/>  
 
 Options  
 
