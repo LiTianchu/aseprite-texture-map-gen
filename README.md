@@ -66,7 +66,9 @@ git submodule update --init --recursive
 
 ### Testing
 
-#### Using `test.sh` (Need Unix / Bash Environment)
+#### Testing can be done in one of the following ways
+
+**1. Using `test.sh` (Need Unix / Bash Environment):**
 
 First, add a `.env` file in the **project root folder** with the following content:  
 
@@ -80,13 +82,13 @@ Second, run the following command:
 chmod +x ./test.sh && ./test.sh
 ```
 
-#### Using Aseprite's Lua runtime
+**2. Using Aseprite's Lua runtime:**  
 
 ```
 your_path_to_aseprite_executable -b --script ./tests/test_normal_map.lua
 ```
 
-#### Using your installed Lua runtime
+**3. Using your installed Lua runtime:**
 
 ```
 lua ./tests/test_normal_map.lua
