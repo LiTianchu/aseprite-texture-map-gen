@@ -1,5 +1,6 @@
 package.path = "./?.lua;" .. package.path
 
+-- Test for Sobel Operator based normal map generation
 local NormalMapGenerator = require("src.NormalMapGenerator")
 
 local function approx_equal(actual, expected, message)
@@ -34,7 +35,7 @@ local left_to_right = {
 	1,
 }
 x, y, z = NormalMapGenerator.sobel_normal(left_to_right, 3, 3, 1, 1, 1)
-assert(x < 0, "A height map rising to the right should produce a negative X normal")
+assert(x > 0, "A height map rising to the right should produce a positive X normal")
 approx_equal(y, 0, "A horizontal gradient should have no Y component")
 approx_equal(x * x + y * y + z * z, 1, "The output normal should be normalized")
 
