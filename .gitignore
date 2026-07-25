@@ -9,6 +9,7 @@ luac.out
 .vscode/
 .vs/
 .idea/
+*.sublime-workspace
 
 # Object files
 *.o
@@ -46,8 +47,10 @@ luac.out
 # MacOS
 .DS_Store
 
-# WSL
+# Windows
 *:Zone.Identifier
+Thumbs.db
+Desktop.ini
 
 # Bundles
 *.zip
@@ -56,3 +59,20 @@ luac.out
 *.gz
 *.7z
 *.aseprite-extension
+
+# Agents
+.codex/
+.agents/
+.claude/
+.cursor/
+.copilot/
+
+# Misc
+node_modules/
+.env
+*.bak
+*.tmp
+.cache/
+tmp/
+
+
