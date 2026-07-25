@@ -254,6 +254,7 @@ function TextureMapGenerator:generate_from_dialog()
 	end
 
 	local output_layers = {}
+	---@type GenerationJob[]
 	local regeneration_jobs = {}
 	local frame_anchors = {}
 	local active_input_layer = app.layer
