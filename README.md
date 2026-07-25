@@ -70,7 +70,7 @@ chmod +x ./build.sh && ./build.sh
 - **Ground Truth Assumptions**: Same as `Normal Map -> Ground Truth Assumptions`
 - **Height Map Generation Settings**
   - `Intermediate Output`: When `Input Format` is set to `Color`, the generator will need to generate a normal map first as an intermediate texture, check to keep that intermediate output
-  - `Iterations`: Heightmap generation algorithm needs a few iterations to converge, heigher iteration gives more accurate result while taking longer time to compute
+  - `Iterations`: Heightmap generation algorithm needs a few iterations to converge, heigher iteration gives more accurate result while taking longer time to compute, maximum 512 iterations
 
 #### Result Demo  
 

@@ -6,7 +6,7 @@ package.path = "./?.lua;" .. package.path
 -- "your_path_to_aseprite_binary" -b --script tests/test_height_map_dialog.lua
 
 local HeightMapGenerator = require("src.HeightMapGenerator")
-local MAX_ITERATION_COUNT = 256
+local MAX_ITERATION_COUNT = 512
 
 local dialog
 
