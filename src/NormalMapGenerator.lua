@@ -17,6 +17,47 @@ local function show_alert(text)
 	})
 end
 
+local function read_dialog_settings(dialog_box)
+	local data = dialog_box.data
+	local edge_strength = tonumber(data.edge_strength)
+	if not TextureMapUtils.valid_strength(edge_strength) then
+		return nil, nil, "Edge Height must be zero or a positive number."
+	end
+
+	local layer_shape = data.layer_shape
+	if not TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES) then
+		layer_shape = DEFAULT_LAYER_SHAPE
+	end
+
+	return edge_strength, layer_shape
+end
+
+local function find_recorded_frame_number(frame_anchors)
+	for _, anchor in ipairs(frame_anchors) do
+		for _, cel in ipairs(anchor.layer.cels) do
+			if cel == anchor.cel then
+				return cel.frameNumber
+			end
+		end
+	end
+	return nil
+end
+
+function NormalMapGenerator:set_regenerate_available(available)
+	self.regenerate_available = available and self.last_generation ~= nil
+	if self.dialog_box then
+		self.dialog_box:modify({
+			id = "regenerate_normal_map",
+			enabled = self.regenerate_available,
+		})
+	end
+end
+
+function NormalMapGenerator:invalidate_regeneration()
+	self.last_generation = nil
+	self:set_regenerate_available(false)
+end
+
 ---@param plugin Plugin
 function NormalMapGenerator:show_dialog(plugin)
 	local sprite = app.sprite
@@ -38,6 +79,12 @@ function NormalMapGenerator:show_dialog(plugin)
 	self.pref = plugin.preferences
 	self.sprite = sprite
 	self.option_layers = option_layers
+	self.last_generation = nil
+	self.regenerate_available = false
+	-- These runtime objects were stored in preferences by older builds.
+	self.pref.is_regenerate_available = nil
+	self.pref.last_input_layers = nil
+	self.pref.last_generated_layers = nil
 
 	local selected_layers_are_input = self.pref.selected_layers_are_input
 	if selected_layers_are_input == nil then
@@ -67,8 +114,11 @@ function NormalMapGenerator:show_dialog(plugin)
 			local data = self.dialog_box.data
 			self.pref.input_layer = data.input_layer
 			self.pref.selected_layers_are_input = data.selected_layers_are_input
+			self.pref.separate_layers = data.separate_layers
 			self.pref.layer_shape = data.layer_shape
 			self.pref.edge_strength = data.edge_strength
+			self.last_generation = nil
+			self.regenerate_available = false
 		end,
 	})
 
@@ -87,13 +137,18 @@ function NormalMapGenerator:show_dialog(plugin)
 					id = "separate_layers",
 					enabled = self.dialog_box.data.selected_layers_are_input,
 				})
+				self:invalidate_regeneration()
 			end,
 		})
+		:newrow()
 		:check({
 			id = "separate_layers",
 			text = "Separate Generated Layers",
 			selected = separate_layers,
-			onclick = function() end,
+			enabled = selected_layers_are_input,
+			onclick = function()
+				self:invalidate_regeneration()
+			end,
 		})
 		:combobox({
 			id = "input_layer",
@@ -101,31 +156,42 @@ function NormalMapGenerator:show_dialog(plugin)
 			options = options,
 			option = input_option,
 			enabled = not selected_layers_are_input,
+			onchange = function()
+				self:invalidate_regeneration()
+			end,
 		})
+		:separator({ id = "normal_ground_truth_assumptions", text = "Ground Truth Assumptions" })
 		:combobox({
 			id = "layer_shape",
-			label = "Layer Shape",
+			label = "Object Shape",
 			options = LAYER_SHAPES,
 			option = layer_shape,
 		})
 		:number({
 			id = "edge_strength",
-			label = "Edge Strength",
+			label = "Edge Height (0 = flat)",
 			text = tostring(edge_strength),
 			decimals = 2,
 		})
+		:separator({ id = "normal_actions", text = "Actions" })
 		:button({
 			id = "generate_normal_map",
-			text = "Generate",
+			text = "Generate New",
 			focus = true,
 			onclick = function()
 				self:generate_from_dialog()
 			end,
 		})
-
+		:button({
+			id = "regenerate_normal_map",
+			text = "Regenerate",
+			onclick = function()
+				self:regenerate_last()
+			end,
+			enabled = self.regenerate_available,
+		})
 	self.dialog_box:show({
 		wait = false,
-		bounds = Rectangle(100, 100, 320, 220),
 	})
 end
 
@@ -136,15 +202,10 @@ function NormalMapGenerator:generate_from_dialog()
 	end
 
 	local data = self.dialog_box.data
-	local edge_strength = tonumber(data.edge_strength)
-	if not TextureMapUtils.valid_strength(edge_strength) then
-		show_alert("Edge Strength must be zero or a positive number.")
+	local edge_strength, layer_shape, settings_error = read_dialog_settings(self.dialog_box)
+	if settings_error then
+		show_alert(settings_error)
 		return
-	end
-
-	local layer_shape = data.layer_shape
-	if not TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES) then
-		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
 	local layers
@@ -163,45 +224,80 @@ function NormalMapGenerator:generate_from_dialog()
 	end
 
 	local frame_number = app.frame and app.frame.frameNumber or 1
-	local generated_layers = {}
+	local generated_jobs = {}
 
-	for _, lyr in ipairs(ordered_layers) do
-		-- draw an temp image for the input layer to get the source image for normal map generation
-		local source, has_cel = AsepriteLayerUtils.render_layer(self.sprite, lyr, frame_number)
-
+	if data.selected_layers_are_input and not data.separate_layers and #ordered_layers > 1 then
+		local source, has_cel, missing_layer =
+			AsepriteLayerUtils.render_layers(self.sprite, ordered_layers, frame_number)
 		if not has_cel then
-			show_alert("Layer '" .. lyr.name .. "' does not contain an image in the active frame.")
+			show_alert(
+				"Layer '"
+					.. (missing_layer ~= nil and missing_layer.name or "Unknown Layer")
+					.. "' does not contain an image in the active frame."
+			)
 			return
 		end
-
-		-- generate the normal map
-		generated_layers[#generated_layers + 1] = {
-			input_layer = lyr,
-			name = lyr.name .. "_normal",
+		generated_jobs[1] = {
+			input_layers = ordered_layers,
+			name = "Combined_normal",
 			image = TextureMapUtils.create_normal_image(source, edge_strength, layer_shape),
 		}
+	else
+		for _, input_layer in ipairs(ordered_layers) do
+			local source, has_cel = AsepriteLayerUtils.render_layer(self.sprite, input_layer, frame_number)
+			if not has_cel then
+				show_alert("Layer '" .. input_layer.name .. "' does not contain an image in the active frame.")
+				return
+			end
+
+			generated_jobs[#generated_jobs + 1] = {
+				input_layers = { input_layer },
+				name = input_layer.name .. "_normal",
+				image = TextureMapUtils.create_normal_image(source, edge_strength, layer_shape),
+			}
+		end
 	end
 
 	local output_layers = {}
+	local regeneration_jobs = {}
+	local frame_anchors = {}
 	local active_input_layer = app.layer
 	local active_output_layer
+
+	for _, input_layer in ipairs(ordered_layers) do
+		frame_anchors[#frame_anchors + 1] = {
+			layer = input_layer,
+			cel = input_layer:cel(frame_number),
+		}
+	end
 
 	app.transaction("Generate Normal Map", function()
 		-- insert from top to bottom so inserting a lower pair cannot separate
 		-- a source layer from the normal layer already placed above it
-		for index = #generated_layers, 1, -1 do
-			local generated_layer = generated_layers[index]
-			local output_layer = AsepriteLayerUtils.create_layer_above(
+		for index = #generated_jobs, 1, -1 do
+			local generated_job = generated_jobs[index]
+			local output_layer = AsepriteLayerUtils.create_layer_for_inputs(
 				self.sprite,
-				generated_layer.input_layer,
-				generated_layer.name,
-				generated_layer.image,
+				generated_job.input_layers,
+				generated_job.name,
+				generated_job.image,
 				frame_number
 			)
 
-			output_layers[#output_layers + 1] = output_layer
-			if generated_layer.input_layer == active_input_layer then
-				active_output_layer = output_layer
+			output_layers[index] = output_layer
+			regeneration_jobs[index] = {
+				input_layers = generated_job.input_layers,
+				output_layer = output_layer,
+			}
+			frame_anchors[#frame_anchors + 1] = {
+				layer = output_layer,
+				cel = output_layer:cel(frame_number),
+			}
+			for _, input_layer in ipairs(generated_job.input_layers) do
+				if input_layer == active_input_layer then
+					active_output_layer = output_layer
+					break
+				end
 			end
 		end
 	end)
@@ -212,7 +308,86 @@ function NormalMapGenerator:generate_from_dialog()
 	self.pref.input_layer = data.input_layer
 	self.pref.layer_shape = layer_shape
 	self.pref.edge_strength = edge_strength
+	self.last_generation = {
+		sprite = self.sprite,
+		frame_anchors = frame_anchors,
+		jobs = regeneration_jobs,
+	}
+	self:set_regenerate_available(true)
+
 	app.layer = active_output_layer or output_layers[#output_layers]
+	app.refresh()
+end
+
+function NormalMapGenerator:regenerate_last()
+	local last_generation = self.last_generation
+	if not last_generation or not last_generation.jobs or #last_generation.jobs == 0 then
+		show_alert("Generate a normal map before using Regenerate.")
+		return
+	end
+
+	if app.sprite ~= last_generation.sprite then
+		show_alert("Return to the sprite where the normal map was generated and try again.")
+		return
+	end
+
+	-- validate the complete recorded set before rendering or writing anything
+	-- if one generated layer was deleted, regeneration becomes unavailable
+	for _, job in ipairs(last_generation.jobs) do
+		if not AsepriteLayerUtils.sprite_contains_layer(last_generation.sprite, job.output_layer) then
+			self:invalidate_regeneration()
+			show_alert("A generated layer no longer exists. Generate a new normal map.")
+			return
+		end
+		for _, input_layer in ipairs(job.input_layers) do
+			if not AsepriteLayerUtils.sprite_contains_layer(last_generation.sprite, input_layer) then
+				self:invalidate_regeneration()
+				show_alert("An input layer no longer exists. Generate a new normal map.")
+				return
+			end
+		end
+	end
+
+	local frame_number = find_recorded_frame_number(last_generation.frame_anchors or {})
+	if not frame_number then
+		self:invalidate_regeneration()
+		show_alert("The original frame no longer exists. Generate a new normal map.")
+		return
+	end
+
+	local edge_strength, layer_shape, settings_error = read_dialog_settings(self.dialog_box)
+	if settings_error then
+		show_alert(settings_error)
+		return
+	end
+
+	local regenerated_images = {}
+	for index, job in ipairs(last_generation.jobs) do
+		local source, has_cel, missing_layer =
+			AsepriteLayerUtils.render_layers(last_generation.sprite, job.input_layers, frame_number)
+		if not has_cel then
+			show_alert(
+				"Layer '" .. missing_layer.name .. "' does not contain an image in the originally generated frame."
+			)
+			return
+		end
+
+		regenerated_images[index] = TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
+	end
+
+	app.transaction("Regenerate Normal Map", function()
+		for index, job in ipairs(last_generation.jobs) do
+			AsepriteLayerUtils.update_layer_image(
+				last_generation.sprite,
+				job.output_layer,
+				regenerated_images[index],
+				frame_number
+			)
+		end
+	end)
+
+	self.pref.layer_shape = layer_shape
+	self.pref.edge_strength = edge_strength
 	app.refresh()
 end
 

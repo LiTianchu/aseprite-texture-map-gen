@@ -78,13 +78,25 @@ function AsepriteLayerUtils.layer_options(sprite)
 end
 
 function AsepriteLayerUtils.render_layer(sprite, layer, frame_number)
+	return AsepriteLayerUtils.render_layers(sprite, { layer }, frame_number)
+end
+
+function AsepriteLayerUtils.render_layers(sprite, layers, frame_number)
 	local source = Image(sprite.width, sprite.height, ColorMode.RGB)
-	local cel = layer:cel(frame_number)
-	if not cel then
-		return source, false
+	for _, layer in ipairs(layers) do
+		local cel = layer:cel(frame_number)
+		if not cel then
+			return source, false, layer
+		end
+
+		source:drawImage(
+			cel.image,
+			cel.position,
+			math.floor((cel.opacity * layer.opacity) / 255 + 0.5),
+			layer.blendMode
+		)
 	end
 
-	source:drawImage(cel.image, cel.position, math.floor((cel.opacity * layer.opacity) / 255 + 0.5), layer.blendMode)
 	return source, true
 end
 
@@ -121,6 +133,65 @@ function AsepriteLayerUtils.create_layer_above(sprite, input_layer, name, image,
 	output_layer.stackIndex = input_layer.stackIndex + 1
 	sprite:newCel(output_layer, frame_number, image, Point(0, 0))
 	return output_layer
+end
+
+function AsepriteLayerUtils.create_layer_for_inputs(sprite, input_layers, name, image, frame_number)
+	local first_input = input_layers[1]
+	if #input_layers == 1 then
+		return AsepriteLayerUtils.create_layer_above(sprite, first_input, name, image, frame_number)
+	end
+
+	local common_parent = first_input.parent
+	local anchor_layer = first_input
+	for index = 2, #input_layers do
+		local input_layer = input_layers[index]
+		if input_layer.parent ~= common_parent then
+			common_parent = nil
+			break
+		end
+		if input_layer.stackIndex > anchor_layer.stackIndex then
+			anchor_layer = input_layer
+		end
+	end
+
+	local output_layer = sprite:newLayer()
+	output_layer.name = name
+	if common_parent then
+		output_layer.parent = common_parent
+		output_layer.stackIndex = anchor_layer.stackIndex + 1
+	end
+	sprite:newCel(output_layer, frame_number, image, Point(0, 0))
+	return output_layer
+end
+
+local function contains_layer_recursive(layers, target)
+	for _, layer in ipairs(layers) do
+		if layer == target then
+			return true
+		end
+		if layer.isGroup and contains_layer_recursive(layer.layers, target) then
+			return true
+		end
+	end
+	return false
+end
+
+function AsepriteLayerUtils.sprite_contains_layer(sprite, target)
+	return sprite ~= nil and target ~= nil and contains_layer_recursive(sprite.layers, target)
+end
+
+function AsepriteLayerUtils.update_layer_image(sprite, layer, new_image, frame_number)
+	if not AsepriteLayerUtils.sprite_contains_layer(sprite, layer) then
+		return false
+	end
+
+	local cel = layer:cel(frame_number)
+	if cel then
+		cel.image = new_image
+	else
+		sprite:newCel(layer, frame_number, new_image, Point(0, 0))
+	end
+	return true
 end
 
 return AsepriteLayerUtils
