@@ -44,6 +44,11 @@ function NormalMapGenerator:show_dialog(plugin)
 		selected_layers_are_input = true
 	end
 
+	local separate_layers = self.pref.separate_layers
+	if separate_layers == nil then
+		separate_layers = true
+	end
+
 	local edge_strength = tonumber(self.pref.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		edge_strength = DEFAULT_EDGE_STRENGTH
@@ -54,13 +59,13 @@ function NormalMapGenerator:show_dialog(plugin)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	local input_option = AsepriteLayerUtils.selected_option(options, option_layers, self.pref.input_layers, app.layer)
+	local input_option = AsepriteLayerUtils.selected_option(options, option_layers, self.pref.input_layer, app.layer)
 
 	self.dialog_box = Dialog({
 		title = "Generate Normal Map",
 		onclose = function()
 			local data = self.dialog_box.data
-			self.pref.input_layers = data.input_layers
+			self.pref.input_layer = data.input_layer
 			self.pref.selected_layers_are_input = data.selected_layers_are_input
 			self.pref.layer_shape = data.layer_shape
 			self.pref.edge_strength = data.edge_strength
@@ -69,23 +74,33 @@ function NormalMapGenerator:show_dialog(plugin)
 
 	self.dialog_box
 		:separator({ id = "normal_map_layers_separator", text = "Layers" })
-		:combobox({
-			id = "input_layers",
-			label = "Input Layers",
-			options = options,
-			option = input_option,
-			enabled = not selected_layers_are_input,
-		})
 		:check({
 			id = "selected_layers_are_input",
-			text = "Selected Layers Are Input",
+			text = "Selected Layers Are Input (Multiple Layers)",
 			selected = selected_layers_are_input,
 			onclick = function()
 				self.dialog_box:modify({
-					id = "input_layers",
+					id = "input_layer",
 					enabled = not self.dialog_box.data.selected_layers_are_input,
 				})
+				self.dialog_box:modify({
+					id = "separate_layers",
+					enabled = self.dialog_box.data.selected_layers_are_input,
+				})
 			end,
+		})
+		:check({
+			id = "separate_layers",
+			text = "Separate Generated Layers",
+			selected = separate_layers,
+			onclick = function() end,
+		})
+		:combobox({
+			id = "input_layer",
+			label = "Input Layer (Single Layer)",
+			options = options,
+			option = input_option,
+			enabled = not selected_layers_are_input,
 		})
 		:combobox({
 			id = "layer_shape",
@@ -137,8 +152,8 @@ function NormalMapGenerator:generate_from_dialog()
 	if data.selected_layers_are_input then
 		layers = AsepriteLayerUtils.selected_layers(app.range, app.layer)
 	else
-		local input_layer = self.option_layers[data.input_layers]
-		layers = input_layer and { input_layer } or {}
+		local single_input_layer = self.option_layers[data.input_layer]
+		layers = single_input_layer and { single_input_layer } or {}
 	end
 
 	local ordered_layers = AsepriteLayerUtils.ordered_image_layers(self.sprite, layers)
@@ -150,19 +165,19 @@ function NormalMapGenerator:generate_from_dialog()
 	local frame_number = app.frame and app.frame.frameNumber or 1
 	local generated_layers = {}
 
-	for _, input_layer in ipairs(ordered_layers) do
+	for _, lyr in ipairs(ordered_layers) do
 		-- draw an temp image for the input layer to get the source image for normal map generation
-		local source, has_cel = AsepriteLayerUtils.render_layer(self.sprite, input_layer, frame_number)
+		local source, has_cel = AsepriteLayerUtils.render_layer(self.sprite, lyr, frame_number)
 
 		if not has_cel then
-			show_alert("Layer '" .. input_layer.name .. "' does not contain an image in the active frame.")
+			show_alert("Layer '" .. lyr.name .. "' does not contain an image in the active frame.")
 			return
 		end
 
 		-- generate the normal map
 		generated_layers[#generated_layers + 1] = {
-			input_layer = input_layer,
-			name = input_layer.name .. "_normal",
+			input_layer = lyr,
+			name = lyr.name .. "_normal",
 			image = TextureMapUtils.create_normal_image(source, edge_strength, layer_shape),
 		}
 	end
@@ -192,8 +207,9 @@ function NormalMapGenerator:generate_from_dialog()
 	end)
 
 	-- update app preferences to remember the last used settings for next time
-	self.pref.input_layers = data.input_layers
 	self.pref.selected_layers_are_input = data.selected_layers_are_input
+	self.pref.separate_layers = data.separate_layers
+	self.pref.input_layer = data.input_layer
 	self.pref.layer_shape = layer_shape
 	self.pref.edge_strength = edge_strength
 	app.layer = active_output_layer or output_layers[#output_layers]
