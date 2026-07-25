@@ -13,6 +13,8 @@ local function valid_option(value, options)
 	return TextureMapUtils.valid_layer_shape(value, options)
 end
 
+---@param pref table The preferences table containing saved settings from Aseprite Plugin
+---@return HeightMapGeneratorSettings settings initial settings for the height map generator
 local function initial_settings(pref)
 	local edge_strength = tonumber(pref.height_edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
@@ -39,22 +41,24 @@ local function initial_settings(pref)
 		dump_intermediate_normal_map = false
 	end
 
-	return {
+	---@type HeightMapGeneratorSettings
+	local settings = {
 		edge_strength = edge_strength,
 		iteration_count = iteration_count,
 		input_type = input_type,
 		layer_shape = layer_shape,
 		dump_intermediate_normal_map = dump_intermediate_normal_map,
 	}
+	return settings
 end
 
 local function read_dialog_settings(data)
-	local edge_strength = tonumber(data.edge_strength)
+	local edge_strength = tonumber(data.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		return nil, "Edge Intensity must be zero or a positive number."
 	end
 
-	local iteration_count = tonumber(data.iteration_count)
+	local iteration_count = tonumber(data.iteration_count) or DEFAULT_ITERATION_COUNT
 	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT) then
 		return nil, "Slope Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT .. "."
 	end
