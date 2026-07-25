@@ -47,7 +47,7 @@ end
 
 ---@param sprite Sprite The Aseprite sprite document to process
 ---@param selected_layers Layer[] The Aseprite layers to order
----@return Layer[] # The ordered list of Aseprite image layers in the order recorded in the sprite document
+---@return Layer[] ordered_layers # The ordered list of Aseprite image layers in the order recorded in the sprite document
 function AsepriteLayerUtils.ordered_image_layers(sprite, selected_layers)
 	-- get all selected image layers
 	local selected = {}
@@ -94,8 +94,8 @@ local function append_layer_options(layers, prefix, options, option_layers)
 end
 
 ---@param sprite Sprite The Aseprite sprite document to extract the layer options from
----@return string[] # The list of aseprite layer path options, e.g. "Group, Subgroup, Layer"
----@return table<string, Layer> # A mapping of Aseprite layer path options to their corresponding Aseprite layer
+---@return string[] options # The list of aseprite layer path options, e.g. "Group, Subgroup, Layer"
+---@return table<string, Layer> option_layers # A mapping of Aseprite layer path options to their corresponding Aseprite layer
 function AsepriteLayerUtils.layer_options(sprite)
 	local options = {}
 	local option_layers = {}
@@ -107,6 +107,9 @@ end
 ---@param ref_sprite Sprite The Aseprite sprite document used as a reference for render output dimensions
 ---@param layers Layer[] The Aseprite layers to draw onto the sprite document
 ---@param frame_number integer The Aseprite frame number selected from the layers
+---@return Image composite_image # The new image with the layers composited onto it
+---@return boolean cell_valid_for_all_layers # true if all layers have a cel at the frame_number, false otherwise
+---@return Layer|nil missing_layer # The first layer that does not have a cel at the frame_number, or nil if all layers have a cel
 function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
 	local source = Image(ref_sprite.width, ref_sprite.height, ColorMode.RGB)
 	for _, layer in ipairs(layers) do
@@ -131,7 +134,7 @@ end
 ---@param option_layers table<string, Layer> A mapping of Aseprite layer path options to their corresponding Aseprite layer
 ---@param preferred_option string|nil The preferred option to select if it exists in the option layers
 ---@param active_layer Layer|nil The Aseprite layer corresponding to the active layer in the timeline, used to select the option corresponding to the active layer if the preferred option does not exist
----@return string # The preferred option if it exists in the option layers, otherwise the option corresponds to the active layer, otherwise the first option in the list
+---@return string option # The preferred option if it exists in the option layers, otherwise the option corresponds to the active layer, otherwise the first option in the list
 function AsepriteLayerUtils.selected_option(options, option_layers, preferred_option, active_layer)
 	if preferred_option and option_layers[preferred_option] then
 		return preferred_option
@@ -151,7 +154,7 @@ end
 --- Extracts the selected layers from the Aseprite range object
 ---@param range Range The Aseprite range object, which may contain a list of selected layers
 ---@param active_layer Layer The Aseprite layer corresponding to the active layer in the timeline, fallback to this layer if the range does not contain any selected layers
----@return Layer[] # The list of selected layers, or the active layer if no layers are
+---@return Layer[] layers # The list of selected layers, or the active layer if no layers are
 function AsepriteLayerUtils.selected_layers(range, active_layer)
 	local layers = range and range.layers or {}
 	if #layers > 0 then
@@ -167,7 +170,7 @@ end
 ---@param name string The name of the new layer
 ---@param image Image The image to assign to the new layer's cel
 ---@param frame_number integer The frame number to assign the new layer's cel to
----@return Layer # The newly created Aseprite layer in the sprite document
+---@return Layer new_layer # The newly created Aseprite layer in the sprite document
 function AsepriteLayerUtils.create_layer_above(sprite, input_layer, name, image, frame_number)
 	local output_layer = sprite:newLayer()
 	output_layer.name = name
@@ -183,7 +186,7 @@ end
 ---@param name string The name of the new layer
 ---@param image Image The image to assign to the new layer's cel
 ---@param frame_number integer The frame number to assign the new layer's cel to
----@return Layer # The newly created Aseprite layer in the sprite document
+---@return Layer new_layer # The newly created Aseprite layer in the sprite document
 function AsepriteLayerUtils.create_layer_for_inputs(sprite, input_layers, name, image, frame_number)
 	local first_input = input_layers[1]
 	if #input_layers == 1 then
@@ -237,6 +240,7 @@ end
 ---Check if the sprite contains the target layer, including subgroups
 ---@param sprite Sprite The Aseprite sprite document to check for the target layer
 ---@param target Layer The Aseprite layer to check for containment in the sprite document
+---@return boolean # true if the target layer is contained in the sprite document, false otherwise
 function AsepriteLayerUtils.sprite_contains_layer(sprite, target)
 	return sprite ~= nil and target ~= nil and contains_layer_recursive(sprite.layers, target)
 end
@@ -246,7 +250,7 @@ end
 ---@param layer Layer The Aseprite layer to update
 ---@param new_image Image The new image to assign to the layer's cel
 ---@param frame_number integer The selected frame number for the layer's cel
----@return boolean # true if the layer's cel was updated or created, false if the layer does not exist in the sprite
+---@return boolean succeeded # true if the layer's cel was updated or created, false if the layer does not exist in the sprite
 function AsepriteLayerUtils.update_layer_image(sprite, layer, new_image, frame_number)
 	if not AsepriteLayerUtils.sprite_contains_layer(sprite, layer) then
 		return false

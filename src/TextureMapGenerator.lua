@@ -2,6 +2,7 @@ local AsepriteLayerUtils = require("src.AsepriteLayerUtils")
 
 --- The abstract base class for generating texture maps from image layers in Aseprite
 --- Inherited by specific texture map generators like NormalMapGenerator and HeightMapGenerator
+---@class TextureMapGenerator
 local TextureMapGenerator = {}
 TextureMapGenerator.__index = TextureMapGenerator
 

@@ -78,6 +78,7 @@ local function read_dialog_settings(data)
 	}
 end
 
+---@class HeightMapGenerator : TextureMapGenerator
 local HeightMapGenerator = TextureMapGenerator.new({
 	title = "Generate Height Map",
 	display_name = "Height Map",

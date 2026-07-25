@@ -43,6 +43,7 @@ local function read_dialog_settings(data)
 	}
 end
 
+---@class NormalMapGenerator : TextureMapGenerator
 local NormalMapGenerator = TextureMapGenerator.new({
 	title = "Generate Normal Map",
 	display_name = "Normal Map",

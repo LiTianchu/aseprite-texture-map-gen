@@ -1,40 +1,60 @@
 local TextureMapUtils = {}
 
+---@param value number The value to clamp
+---@param minimum number The minimum allowed value
+---@param maximum number The maximum allowed value
+---@return number # The clamped value within [minimum, maximum]
 local function clamp(value, minimum, maximum)
 	return math.max(minimum, math.min(maximum, value))
 end
 
-local function round_to_byte(value)
-	return math.floor(clamp(value, 0, 255) + 0.5)
+---@param value number The value to round and clamp
+---@return integer # The value rounded to the nearest integer and clamped to [0, 255]
+local function round_to_u8(value)
+	return math.floor(clamp(value, 0, 255) + 0.5) -- +0.5 to turn floor into round
 end
 
+---@param value number The edge strength value to validate
+---@return boolean # true if the value is a valid edge strength (non-negative finite number),
 function TextureMapUtils.valid_strength(value)
 	return value ~= nil and value == value and value ~= math.huge and value ~= -math.huge and value >= 0
 end
 
-function TextureMapUtils.valid_iteration_count(value, maximum)
-	return value ~= nil
-		and value == value
-		and value ~= math.huge
-		and value ~= -math.huge
-		and value == math.floor(value)
-		and value >= 1
-		and value <= maximum
+---@param count number The iteration count to validate
+---@param maximum integer The maximum allowed iteration count
+---@return boolean # true if the count is a valid iteration count within [1, maximum], false otherwise
+function TextureMapUtils.valid_iteration_count(count, maximum)
+	return count ~= nil
+		and count == count
+		and count ~= math.huge
+		and count ~= -math.huge
+		and count == math.floor(count)
+		and count >= 1
+		and count <= maximum
 end
 
-function TextureMapUtils.valid_layer_shape(value, layer_shapes)
+---@param shape_name string Name of the layer shape to validate
+---@param layer_shapes string[] The list of valid layer shapes
+---@return boolean # true if the name value is a valid layer shape, false otherwise
+function TextureMapUtils.valid_layer_shape(shape_name, layer_shapes)
 	for _, shape in ipairs(layer_shapes) do
-		if value == shape then
+		if shape_name == shape then
 			return true
 		end
 	end
 	return false
 end
 
-local function sample_texture(texture, width, height, x, y)
+---@param band number[] The texture band to sample from, represented as a 1D array of pixel values
+---@param width integer The width of the texture
+---@param height integer The height of the texture
+---@param x integer The x-coordinate of the pixel to sample
+---@param y integer The y-coordinate of the pixel to sample
+---@return number value sampled pixel value, clamped to the texture bounds
+local function sample_band(band, width, height, x, y)
 	x = clamp(x, 0, width - 1)
 	y = clamp(y, 0, height - 1)
-	return texture[y * width + x + 1]
+	return band[y * width + x + 1]
 end
 
 ---Calculates one tangent-space normal using a 3x3 Sobel kernel.
@@ -49,14 +69,14 @@ end
 ---@return number z
 function TextureMapUtils.sobel_normal(luminance_map, width, height, x, y, edge_strength)
 	-- sample the 3x3 neighborhood of the pixel at (x, y)
-	local top_left = sample_texture(luminance_map, width, height, x - 1, y - 1)
-	local top = sample_texture(luminance_map, width, height, x, y - 1)
-	local top_right = sample_texture(luminance_map, width, height, x + 1, y - 1)
-	local left = sample_texture(luminance_map, width, height, x - 1, y)
-	local right = sample_texture(luminance_map, width, height, x + 1, y)
-	local bottom_left = sample_texture(luminance_map, width, height, x - 1, y + 1)
-	local bottom = sample_texture(luminance_map, width, height, x, y + 1)
-	local bottom_right = sample_texture(luminance_map, width, height, x + 1, y + 1)
+	local top_left = sample_band(luminance_map, width, height, x - 1, y - 1)
+	local top = sample_band(luminance_map, width, height, x, y - 1)
+	local top_right = sample_band(luminance_map, width, height, x + 1, y - 1)
+	local left = sample_band(luminance_map, width, height, x - 1, y)
+	local right = sample_band(luminance_map, width, height, x + 1, y)
+	local bottom_left = sample_band(luminance_map, width, height, x - 1, y + 1)
+	local bottom = sample_band(luminance_map, width, height, x, y + 1)
+	local bottom_right = sample_band(luminance_map, width, height, x + 1, y + 1)
 
 	-- horizontal Sobel operator Gx, shape:
 	-- -1 0 1
@@ -81,6 +101,9 @@ end
 
 --- Converts an image to a luminance texture using Rec. 709 formula.
 --- Each pixel is represented by a single luminance value.
+--- @param image Image The source image to convert to a luminance texture.
+--- @return number[] luminance_map # RGB luminance values in the range [0, 1], multiplied by alpha
+--- @return number[] alpha_map # Alpha values in the range [0, 255]
 local function image_to_luminance_texture(image)
 	local luminance_map = {}
 	local alpha_map = {}
@@ -105,6 +128,10 @@ local function image_to_luminance_texture(image)
 end
 
 ---Create a tangent-space normal map from a source image using a Sobel filter.
+---@param source Image The source image to convert to a normal map.
+---@param edge_strength number The strength of the edges in the normal map.
+---@param layer_shape string The shape of the layer, either "Convex" or "Concave".
+---@return Image normal_map The generated normal map image.
 function TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
 	local luminance_map, alpha_map = image_to_luminance_texture(source)
 	local normal_map = Image(source.width, source.height, ColorMode.RGB)
@@ -126,9 +153,9 @@ function TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
 				x,
 				y,
 				pixel_color.rgba(
-					round_to_byte((normal_x * 0.5 + 0.5) * 255),
-					round_to_byte((normal_y * 0.5 + 0.5) * 255),
-					round_to_byte((normal_z * 0.5 + 0.5) * 255),
+					round_to_u8((normal_x * 0.5 + 0.5) * 255),
+					round_to_u8((normal_y * 0.5 + 0.5) * 255),
+					round_to_u8((normal_z * 0.5 + 0.5) * 255),
 					alpha_map[index]
 				)
 			)
@@ -138,31 +165,36 @@ function TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
 	return normal_map
 end
 
+---@param mask boolean[]|nil Optional mask indicating which pixels are part of the surface. If nil, all pixels are considered part of the surface
+---@param index integer The index of the pixel to check
+---@return boolean # true if the pixel is part of the surface, false otherwise
 local function has_surface(mask, index)
 	return mask == nil or mask[index]
 end
 
----Reconstructs height values from per-pixel X/Y slopes using iterative relaxation.
----Slopes are expressed as height change per pixel. Values are centered around 0.5,
----and are not normalized, so changing slope strength changes output contrast.
----@param slope_x number[]
----@param slope_y number[]
----@param width integer
----@param height integer
----@param iteration_count integer
----@param mask boolean[]|nil
----@return number[]
+---Reconstructs height values from per-pixel X/Y slopes using iterative relaxation with Jacobi Iteration
+---@param slope_x number[] Slope map detected in the X direction, expressed as height change per pixel when moved in the +X direction
+---@param slope_y number[] Slope map detected in the Y direction, expressed as height change per pixel when moved in the +Y direction
+---@param width integer Width of the slope maps
+---@param height integer Height of the slope maps
+---@param iteration_count integer Number of iterations to perform for relaxation. More iterations yield more converged results
+---@param mask boolean[]|nil Optional mask indicating which pixels are part of the surface. If nil, all pixels are considered part of the surface
+---@return number[] height_map Reconstructed height values, centered around 0.5, expressed as a 1D array of pixel values
 function TextureMapUtils.slope_extract_height(slope_x, slope_y, width, height, iteration_count, mask)
-	local current = {}
-	local next_values = {}
 	local pixel_count = width * height
 
+	-- iteration states
+	local current = {}
+	local next_values = {}
+
+	-- initial state
 	for index = 1, pixel_count do
 		current[index] = 0.5
 		next_values[index] = 0.5
 	end
 
 	for _ = 1, iteration_count do
+		-- max change for convergence tracking
 		local maximum_change = 0
 
 		for y = 0, height - 1 do
@@ -176,55 +208,70 @@ function TextureMapUtils.slope_extract_height(slope_x, slope_y, width, height, i
 					local center_slope_x = slope_x[index]
 					local center_slope_y = slope_y[index]
 
-					if x > 0 then
+					-- apply 5 point stencil operator
+					-- 0 1 0
+					-- 1 4 1
+					-- 0 1 0
+					if x > 0 then -- left neighbor
 						local left = index - 1
 						if has_surface(mask, left) then
+							-- center pixel is at +X dir, so need to add
 							estimate_sum = estimate_sum + current[left] + 0.5 * (slope_x[left] + center_slope_x)
 							estimate_count = estimate_count + 1
 						end
 					end
-					if x + 1 < width then
+					if x + 1 < width then -- right neighbor
 						local right = index + 1
 						if has_surface(mask, right) then
+							-- center pixel is at -X dir, so need to subtract
 							estimate_sum = estimate_sum + current[right] - 0.5 * (slope_x[right] + center_slope_x)
 							estimate_count = estimate_count + 1
 						end
 					end
-					if y > 0 then
+					if y > 0 then -- top neighbor
 						local top = index - width
 						if has_surface(mask, top) then
+							-- center pixel is at +Y dir, so need to add
 							estimate_sum = estimate_sum + current[top] + 0.5 * (slope_y[top] + center_slope_y)
 							estimate_count = estimate_count + 1
 						end
 					end
-					if y + 1 < height then
+					if y + 1 < height then -- bottom neighbor
 						local bottom = index + width
 						if has_surface(mask, bottom) then
+							-- center pixel is at -Y dir, so need to subtract
 							estimate_sum = estimate_sum + current[bottom] - 0.5 * (slope_y[bottom] + center_slope_y)
 							estimate_count = estimate_count + 1
 						end
 					end
 
+					-- update step
 					local next_height = current[index]
 					if estimate_count > 0 then
+						-- normalize
 						local neighbor_estimate = estimate_sum / estimate_count
-						-- under-relaxation prevents two-pixel/checkerboard oscillation
+						-- under-relaxation prevents two-pixel/checkerboard oscillation by blending
 						next_height = 0.5 * current[index] + 0.5 * neighbor_estimate
 					end
 					next_values[index] = next_height
+
+					-- compute maximum change for convergence tracking
 					maximum_change = math.max(maximum_change, math.abs(next_height - current[index]))
 				end
 			end
 		end
 
+		-- update states for next iteration
 		current, next_values = next_values, current
+
+		-- if the maximum change is small enought to be considered converged, stop iterating
 		if maximum_change < 0.0000001 then
 			break
 		end
 	end
 
-	-- a slope field determines relative, not absolute, height. Keep the mean
-	-- at neutral gray so additional iterations cannot drift the whole surface
+	-- re-center step
+	-- a slope field determines relative not absolute height, re-centering is needed
 	local height_sum = 0
 	local surface_pixel_count = 0
 	for index = 1, pixel_count do
@@ -235,7 +282,10 @@ function TextureMapUtils.slope_extract_height(slope_x, slope_y, width, height, i
 	end
 
 	if surface_pixel_count > 0 then
-		local offset = 0.5 - height_sum / surface_pixel_count
+		local mean_height = height_sum / surface_pixel_count
+		local offset = 0.5 - mean_height -- how far does mean height deviate from center
+
+		-- shifts everything by the offset so that the mean is centered at 0.5
 		for index = 1, pixel_count do
 			if has_surface(mask, index) then
 				current[index] = current[index] + offset
@@ -246,6 +296,12 @@ function TextureMapUtils.slope_extract_height(slope_x, slope_y, width, height, i
 	return current
 end
 
+---@param image Image The source image to convert to slope textures
+---@param edge_strength number The strength of the edges in the generated slope textures
+---@return number[] slope_x Slope map detected in the X direction, expressed as height change per pixel when moved in the +X direction
+---@return number[] slope_y Slope map detected in the Y direction, expressed as height change per pixel when moved in the +Y direction
+---@return number[] alpha_map Alpha values in the range [0, 255] for each pixel
+---@return boolean[] surface_mask Boolean mask indicating which pixels are part of the surface (true) and which are not (false)
 local function image_to_slope_texture(image, edge_strength)
 	local slope_x = {}
 	local slope_y = {}
@@ -261,6 +317,8 @@ local function image_to_slope_texture(image, edge_strength)
 			local blue = pixel_color.rgbaB(pixel)
 			local alpha = pixel_color.rgbaA(pixel)
 			local index = y * image.width + x + 1
+
+			-- remap normal values from [0, 255] to [-1, 1] range
 			local normal_x = clamp((red - 128) / 127, -1, 1)
 			local normal_y = clamp((green - 128) / 127, -1, 1)
 			local normal_z = clamp((blue - 128) / 127, -1, 1)
@@ -268,10 +326,15 @@ local function image_to_slope_texture(image, edge_strength)
 			alpha_map[index] = alpha
 			surface_mask[index] = alpha > 0
 			if alpha > 0 and normal_z >= 0.001 then
-				-- Aseprite normal maps use green-up, while image y grows downward
-				-- so use flipped sign for x and y
-				slope_x[index] = (-normal_x / normal_z) / image.width * edge_strength
-				slope_y[index] = (normal_y / normal_z) / image.height * edge_strength
+				-- Aseprite normal maps use green-up so use flipped sign for x and y
+				-- normal = (-∂h/∂x, -∂h/∂y, 1)
+
+				-- ∂h/∂x: rate of change of height in the x direction
+				slope_x[index] = ((-normal_x / normal_z) / image.width) * edge_strength
+
+				-- ∂h/∂y: rate of change of height in the y direction
+				-- image y grows downward in Aseprite, need to flip the sign again
+				slope_y[index] = ((normal_y / normal_z) / image.height) * edge_strength
 			else
 				slope_x[index] = 0
 				slope_y[index] = 0
@@ -282,7 +345,11 @@ local function image_to_slope_texture(image, edge_strength)
 	return slope_x, slope_y, alpha_map, surface_mask
 end
 
---- Creates a height map from a normal map using iterative relaxation.
+---Creates a height map from a normal map using iterative relaxation.
+---@param source Image The source normal map image to convert to a height map
+---@param edge_strength number The strength of the edges in the generated height map
+---@param iteration_count integer The number of iterations to perform for relaxation. More iterations yield more converged results
+---@return Image height_map The generated height map image
 function TextureMapUtils.create_height_image(source, edge_strength, iteration_count)
 	local slope_x, slope_y, alpha_map, surface_mask = image_to_slope_texture(source, edge_strength)
 	local heights = TextureMapUtils.slope_extract_height(
@@ -299,7 +366,7 @@ function TextureMapUtils.create_height_image(source, edge_strength, iteration_co
 	for y = 0, source.height - 1 do
 		for x = 0, source.width - 1 do
 			local index = y * source.width + x + 1
-			local height_byte = round_to_byte(heights[index] * 255)
+			local height_byte = round_to_u8(heights[index] * 255)
 			height_map:drawPixel(x, y, pixel_color.rgba(height_byte, height_byte, height_byte, alpha_map[index]))
 		end
 	end
