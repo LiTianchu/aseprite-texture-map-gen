@@ -34,37 +34,45 @@ chmod +x ./build.sh && ./build.sh
 
 ### Normal Map Generation
 
-Menu Location: `Edit` > `FX` > `Texture Map Generator` > `Generate Normal Map`  
+**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Generate Normal Map`  
+
+#### Dialog
 
 <img src="demo/normal_dialog.png" alt="Normal Map Generation Dialog"/>  
 
-Options  
+#### Options
 
-- Layers
-  - Selected Layers Are Input: Default option treat selected layers in the timeline below as input layers, allow multiple layers
-  - Separate Generated Layers: When checked, each selected layer will generate it's own output with suffix `_normal` and insert on top of it, when unchecked, all selected layers will generate one single `Combined_normal` layer
-  - Input Layer: Only activated when `Selected layers Are Input` is unchecked, use a single layer selected from the dropdown as input layer, does not support multi-selection
-- Ground Truth Assumptions
-  - Object Shape: Tells the generator whether it should treat the selected layer(s) as concave or convex shape
-  - Edge Intensity: Tells the generator how high the edges are, higher the value, the more ragged the generated output will be
+- **Layers**
+  - `Selected Layers Are Input`: Default option treat selected layers in the timeline below as input layers, allow multiple layers
+  - `Separate Generated Layers`: When checked, each selected layer will generate it's own output with suffix `_normal` and insert on top of it, when unchecked, all selected layers will generate one single `Combined_normal` layer
+  - `Input Layer`: Only activated when `Selected layers Are Input` is unchecked, use a single layer selected from the dropdown as input layer, does not support multi-selection
+- **Ground Truth Assumptions**
+  - `Object Shape`: Tells the generator whether it should treat the selected layer(s) as concave or convex shape
+  - `Edge Intensity`: Tells the generator how high the edges are, higher the value, the more ragged the generated output will be
+
+#### Result Demo
 
 <img src="demo/normal_demo.png" alt="Normal Map Generation Result Demo" />  
 
 ### Height Map Generation
 
-Menu Location: `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`  
+**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`  
+
+#### Dialog
 
 <img src="demo/height_dialog.png" alt="Height Map Generation Dialog"/>  
 
-Options  
+#### Options
 
-- Layers: Same as `Normal Map -> Layers`
-- Input Format
-  - Treat Layers As: Tells the generator whether it should treat the input layers as `Color` or `Normal`, if switched to Normal map, the generator will treat the input as normal and infer the height from it
-- Ground Truth Assumptions: Same as `Normal Map -> Ground Truth Assumptions`
-- Height Map Generation Settings
-  - Intermediate Output: When `Input Format` is set to `Color`, the generator will need to generate normal map first as an intermediate texture, check to keep that intermediate output
-  - Iterations: Heightmap generation algorithm needs a few iterations to converge, heigher iteration gives more accurate result while taking longer time to compute
+- **Layers**: Same as `Normal Map -> Layers`
+- **Input Format**
+  - `Treat Layers As`: Tells the generator whether it should treat the input layers as `Color` or `Normal`, if switched to Normal map, the generator will treat the input as normal and infer the height from it
+- **Ground Truth Assumptions**: Same as `Normal Map -> Ground Truth Assumptions`
+- **Height Map Generation Settings**
+  - `Intermediate Output`: When `Input Format` is set to `Color`, the generator will need to generate normal map first as an intermediate texture, check to keep that intermediate output
+  - `Iterations`: Heightmap generation algorithm needs a few iterations to converge, heigher iteration gives more accurate result while taking longer time to compute
+
+#### Result Demo  
 
 <img src="demo/height_demo.png" alt="Height Map Generation Result Demo" />  
 
