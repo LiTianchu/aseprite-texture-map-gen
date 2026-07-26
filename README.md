@@ -33,7 +33,7 @@ chmod +x ./build.sh && ./build.sh
 ## Using the Extension
 
 Each texture-map submenu provides a `Dialog` command and a `Quick Generate` command. Quick generation skips the
-dialog and uses the layer and map settings saved in the plugin preferences.
+dialog and uses the layer and map settings saved in each `Dialog` form.
 
 <small>*Note: Quick Command generates the texture map with settings set in the Dialog Panel*</small>  
 <small>*Note: Recommended to add the Quick Commands to your keybinds via `Edit` -> `Keyboard Shortcuts` -> `Menus`*</small>  
@@ -94,8 +94,8 @@ Same as [Normal Map: Ground Truth Assumptions](#normal-map-ground-truth-assumpti
 ##### Height Map: Generation Settings
 
 - `Intermediate Output`: When `Input Format` is set to `Color`, the generator will need to generate a normal map first as an intermediate texture, check to keep that intermediate output
-- `Iterations`: The heightmap generation algorithm needs a few iterations to converge, heigher iteration gives more accurate result while taking longer time to compute, maximum 512 iterations
-- `Color Value Levels`: The maximum discretized value allowed in each color channel, lower number produces a more pixelized style
+- `Iterations`: The heightmap generation algorithm needs a few iterations to converge, heigher iteration gives a more accurate result while taking longer to compute, maximum 512 iterations
+- `Color Value Levels`: The maximum discretized value allowed in each color channel, a lower number produces a more pixelized style
   
 #### Result Demo  
 
