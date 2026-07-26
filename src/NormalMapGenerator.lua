@@ -6,8 +6,8 @@ local DEFAULT_LAYER_SHAPE = "Convex"
 local LAYER_SHAPES = { "Convex", "Concave" }
 
 ---@param pref table The preferences table containing saved settings from Aseprite Plugin
----@return NormalMapGeneratorSettings settings initial settings for the normal map generator
-local function initial_settings(pref)
+---@return NormalMapGenerationSettings settings initial settings for the normal map generator
+local function parse_pref_settings(pref)
 	local edge_strength = tonumber(pref.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		edge_strength = DEFAULT_EDGE_STRENGTH
@@ -19,15 +19,21 @@ local function initial_settings(pref)
 	end
 
 	return {
+		selected_layers_are_input = pref.selected_layers_are_input ~= false,
+		separate_layers = pref.separate_layers ~= false,
+		input_layer = pref.input_layer,
 		edge_strength = edge_strength,
 		layer_shape = layer_shape,
 	}
 end
 
----@param data NormalMapGeneratorSettings The data table containing settings to be validated
----@return NormalMapGeneratorSettings|nil settings The validated settings for the normal map generator, or nil if invalid
+---@param data NormalMapGenerationSettings The data table containing settings to be validated
+---@return NormalMapGenerationSettings|nil settings The validated settings for the normal map generator, or nil if invalid
 ---@return string|nil error_message An error message if the settings are invalid, or nil if valid
 local function sanitize_dialog_settings(data)
+	local selected_layers_are_input = data.selected_layers_are_input
+	local separate_layers = data.separate_layers
+
 	local edge_strength = tonumber(data.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		return nil, "Edge Intensity must be zero or a positive number."
@@ -39,6 +45,9 @@ local function sanitize_dialog_settings(data)
 	end
 
 	return {
+		selected_layers_are_input = selected_layers_are_input,
+		separate_layers = separate_layers,
+		input_layer = data.input_layer,
 		edge_strength = edge_strength,
 		layer_shape = layer_shape,
 	}
@@ -55,9 +64,14 @@ local NormalMapGenerator = TextureMapGenerator.new({
 	actions_separator_id = "normal_actions",
 	generate_button_id = "generate_normal_map",
 	regenerate_button_id = "regenerate_normal_map",
-	initial_settings = initial_settings,
+	parse_pref_settings = parse_pref_settings,
 	sanitize_dialog_settings = sanitize_dialog_settings,
 	add_settings_widgets = function(_, dialog_box, settings)
+		if not settings then
+			settings = parse_pref_settings({})
+		end
+		---@cast settings NormalMapGenerationSettings
+
 		dialog_box
 			:separator({ id = "normal_ground_truth_assumptions", text = "Ground Truth Assumptions" })
 			:combobox({
@@ -78,18 +92,32 @@ local NormalMapGenerator = TextureMapGenerator.new({
 		pref.edge_strength = data.edge_strength
 	end,
 	save_settings = function(pref, settings)
+		if not settings then
+			settings = parse_pref_settings(pref)
+		end
+
+		---@cast settings NormalMapGenerationSettings
 		pref.layer_shape = settings.layer_shape
 		pref.edge_strength = settings.edge_strength
 	end,
 	create_outputs = function(source, settings, input_layers, is_combined) -- use polymorphic behavior to create outputs
+		if not settings then
+			settings = parse_pref_settings({})
+		end
+
+		---@cast settings NormalMapGenerationSettings
 		local name = is_combined and "Combined_normal" or input_layers[1].name .. "_normal"
-		return {
+		---@type GenerationJobOutput[]
+		local outputs = {
 			{
 				key = "primary",
-				name = name,
-				image = TextureMapUtils.create_normal_image(source, settings.edge_strength, settings.layer_shape),
+				content = {
+						name = name,
+						image = TextureMapUtils.create_normal_image(source, settings.edge_strength, settings.layer_shape),
+				},
 			},
 		}
+		return outputs
 	end,
 })
 

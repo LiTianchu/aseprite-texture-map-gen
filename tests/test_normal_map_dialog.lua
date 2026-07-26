@@ -91,6 +91,7 @@ app = {
 	end,
 }
 
+---@diagnostic disable: missing-fields
 NormalMapGenerator:show_dialog({
 	preferences = {},
 })
@@ -124,6 +125,7 @@ assert(dialog.widgets_by_id.input_layer.select == nil, "The unsupported select c
 assert(dialog.show_options.wait == false, "The dialog should remain non-modal")
 assert(dialog.show_options.bounds == nil, "The dialog should use Aseprite's content-based minimum size")
 
+---@diagnostic disable: missing-fields
 NormalMapGenerator.last_generation = {
 	jobs = { {} },
 }

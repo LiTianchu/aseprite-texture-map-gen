@@ -98,8 +98,8 @@ assert(#first_generation.jobs == 2, "Separate generation should record one job p
 assert(first_generation.jobs[1].input_layers[1] == bottom_input, "The bottom input should remain paired")
 assert(first_generation.jobs[2].input_layers[1] == top_input, "The top input should remain paired")
 
-local bottom_output = first_generation.jobs[1].outputs[1].layer
-local top_output = first_generation.jobs[2].outputs[1].layer
+local bottom_output = first_generation.jobs[1].outputs[1].content.layer
+local top_output = first_generation.jobs[2].outputs[1].content.layer
 assert(bottom_output.name == "Bottom_normal", "The bottom output should keep its input name")
 assert(top_output.name == "Top_normal", "The top output should keep its input name")
 assert(bottom_output.stackIndex == bottom_input.stackIndex + 1, "The bottom output should be directly above its input")
@@ -210,11 +210,11 @@ local combined_generation = NormalMapGenerator.last_generation
 assert(#combined_generation.jobs == 1, "Combined generation should record one regeneration job")
 assert(#combined_generation.jobs[1].input_layers == 2, "The combined job should retain both inputs")
 assert(
-	combined_generation.jobs[1].outputs[1].layer.name == "Combined_normal",
+	combined_generation.jobs[1].outputs[1].content.layer.name == "Combined_normal",
 	"Combined generation should create a clearly named output"
 )
 
-sprite:deleteLayer(combined_generation.jobs[1].outputs[1].layer)
+sprite:deleteLayer(combined_generation.jobs[1].outputs[1].content.layer)
 NormalMapGenerator:regenerate_last()
 assert(NormalMapGenerator.last_generation == nil, "Deleting an output layer should invalidate regeneration")
 assert(

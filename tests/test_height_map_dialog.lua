@@ -93,6 +93,7 @@ app = {
 	end,
 }
 
+---@diagnostic disable: missing-fields
 HeightMapGenerator:show_dialog({
 	preferences = {},
 })

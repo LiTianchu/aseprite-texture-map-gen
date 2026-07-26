@@ -22,8 +22,8 @@ local function valid_input_type(value, options)
 end
 
 ---@param pref table The preferences table containing saved settings from Aseprite Plugin
----@return HeightMapGeneratorSettings settings initial settings for the height map generator
-local function initial_settings(pref)
+---@return HeightMapGenerationSettings settings initial settings for the height map generator
+local function parse_pref_settings(pref)
 	local edge_strength = tonumber(pref.height_edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		edge_strength = DEFAULT_EDGE_STRENGTH
@@ -49,8 +49,11 @@ local function initial_settings(pref)
 		dump_intermediate_normal_map = false
 	end
 
-	---@type HeightMapGeneratorSettings
+	---@type HeightMapGenerationSettings
 	local settings = {
+		selected_layers_are_input = pref.selected_layers_are_input ~= false,
+		separate_layers = pref.separate_layers ~= false,
+		input_layer = pref.input_layer,
 		edge_strength = edge_strength,
 		iteration_count = iteration_count,
 		input_type = input_type,
@@ -60,10 +63,13 @@ local function initial_settings(pref)
 	return settings
 end
 
----@param data HeightMapGeneratorSettings The data table containing settings to be validated
----@return HeightMapGeneratorSettings|nil settings The validated settings for the height map generator, or nil if invalid
+---@param data HeightMapGenerationSettings The data table containing settings to be validated
+---@return HeightMapGenerationSettings|nil settings The validated settings for the height map generator, or nil if invalid
 ---@return string|nil error_message An error message if the settings are invalid,
 local function sanitize_dialog_settings(data)
+	local selected_layers_are_input = data.selected_layers_are_input
+	local separate_layers = data.separate_layers
+
 	local edge_strength = tonumber(data.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		return nil, "Edge Intensity must be zero or a positive number."
@@ -84,8 +90,11 @@ local function sanitize_dialog_settings(data)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	---@type HeightMapGeneratorSettings
+	---@type HeightMapGenerationSettings
 	local sanized_dialog_settings = {
+		selected_layers_are_input = selected_layers_are_input,
+		separate_layers = separate_layers,
+		input_layer = data.input_layer,
 		edge_strength = edge_strength,
 		iteration_count = iteration_count,
 		input_type = input_type,
@@ -107,14 +116,13 @@ local HeightMapGenerator = TextureMapGenerator.new({
 	actions_separator_id = "height_actions",
 	generate_button_id = "generate_height_map",
 	regenerate_button_id = "regenerate_height_map",
-	preference_keys = {
-		input_layer = "height_input_layer",
-		selected_layers_are_input = "height_selected_layers_are_input",
-		separate_layers = "height_separate_layers",
-	},
-	initial_settings = initial_settings,
+	parse_pref_settings = parse_pref_settings,
 	sanitize_dialog_settings = sanitize_dialog_settings,
 	add_settings_widgets = function(generator, dialog_box, settings)
+		if settings == nil then
+			settings = parse_pref_settings({})
+		end
+		---@cast settings HeightMapGenerationSettings
 		local color_input = settings.input_type == "Color"
 
 		local function update_input_type_controls()
@@ -189,11 +197,17 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		pref.height_iteration_count = data.iteration_count
 	end,
 	save_settings = function(pref, settings)
-		pref.input_type = settings.input_type
-		pref.height_dump_intermediate_normal_map = settings.dump_intermediate_normal_map
-		pref.height_layer_shape = settings.layer_shape
-		pref.height_edge_strength = settings.edge_strength
-		pref.height_iteration_count = settings.iteration_count
+		if not settings then
+			settings = parse_pref_settings(pref)
+		end
+
+		---@cast settings HeightMapGenerationSettings
+
+		pref.input_type = settings.input_type or DEFAULT_INPUT_TYPE
+		pref.height_dump_intermediate_normal_map = settings.dump_intermediate_normal_map or false
+		pref.height_layer_shape = settings.layer_shape or DEFAULT_LAYER_SHAPE
+		pref.height_edge_strength = settings.edge_strength or DEFAULT_EDGE_STRENGTH
+		pref.height_iteration_count = settings.iteration_count or DEFAULT_ITERATION_COUNT
 	end,
 	job_metadata = function(settings)
 		return {
@@ -202,6 +216,11 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		}
 	end,
 	create_outputs = function(source, settings, input_layers, is_combined, metadata)
+		if not settings then
+			settings = parse_pref_settings({})
+		end
+
+		---@cast settings HeightMapGenerationSettings
 		local input_type = metadata and metadata.input_type or settings.input_type
 		local dump_intermediate_normal_map = settings.dump_intermediate_normal_map
 		if metadata then
@@ -218,23 +237,28 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		end
 
 		local base_name = is_combined and "Combined" or input_layers[1].name
+		---@type GenerationJobOutput[]
 		local outputs = {
 			{
 				key = "primary",
-				name = base_name .. "_height",
-				image = TextureMapUtils.create_height_image(
-					normal_image,
-					height_edge_strength,
-					settings.iteration_count
-				),
+				content = {
+					name = base_name .. "_height",
+					image = TextureMapUtils.create_height_image(
+						normal_image,
+						height_edge_strength,
+						settings.iteration_count
+					),
+				},
 			},
 		}
 
 		if dump_intermediate_normal_map then
 			outputs[#outputs + 1] = {
 				key = "intermediate_normal",
-				name = base_name .. "_normal",
-				image = normal_image,
+				content = {
+					name = base_name .. "_normal",
+					image = normal_image,
+				},
 			}
 		end
 		return outputs

@@ -94,17 +94,17 @@ local separate_generation = HeightMapGenerator.last_generation
 assert(separate_generation, "Generate New should record height-map regeneration state")
 assert(#separate_generation.jobs == 2, "Separate generation should create one job per normal input")
 assert(
-	separate_generation.jobs[1].outputs[1].layer.name == "Bottom_height",
+	separate_generation.jobs[1].outputs[1].content.layer.name == "Bottom_height",
 	"The lower separate output should retain its source name"
 )
 assert(
-	separate_generation.jobs[2].outputs[1].layer.name == "Top_height",
+	separate_generation.jobs[2].outputs[1].content.layer.name == "Top_height",
 	"The upper separate output should retain its source name"
 )
 assert(#separate_generation.jobs[1].outputs == 1, "Normal-map input should not create an intermediate normal output")
 
-local bottom_height = separate_generation.jobs[1].outputs[1].layer
-local top_height = separate_generation.jobs[2].outputs[1].layer
+local bottom_height = separate_generation.jobs[1].outputs[1].content.layer
+local top_height = separate_generation.jobs[2].outputs[1].content.layer
 local expected_bottom = TextureMapUtils.create_height_image(horizontal_normal, 1, 64)
 local expected_top = TextureMapUtils.create_height_image(vertical_normal, 1, 64)
 assert(bottom_height:cel(1).image:isEqual(expected_bottom), "The lower normal should produce its expected height")
@@ -144,7 +144,10 @@ assert(
 	single_generation.jobs[1].input_layers[1] == bottom_input,
 	"Single-layer mode should use the layer selected in the combobox"
 )
-assert(single_generation.jobs[1].outputs[1].layer.name == "Bottom_height", "Single-layer output should be named")
+assert(
+	single_generation.jobs[1].outputs[1].content.layer.name == "Bottom_height",
+	"Single-layer output should be named"
+)
 
 bottom_input:cel(1).image = horizontal_color
 top_input:cel(1).image = vertical_color
@@ -169,8 +172,8 @@ assert(#combined_generation.jobs == 1, "Merged generation should record one heig
 assert(#combined_generation.jobs[1].input_layers == 2, "Merged generation should retain both color inputs")
 assert(#combined_generation.jobs[1].outputs == 2, "Keeping the intermediate should record both outputs")
 
-local combined_height = combined_generation.jobs[1].outputs[1].layer
-local combined_normal = combined_generation.jobs[1].outputs[2].layer
+local combined_height = combined_generation.jobs[1].outputs[1].content.layer
+local combined_normal = combined_generation.jobs[1].outputs[2].content.layer
 assert(combined_height.name == "Combined_height", "Merged height output should be clearly named")
 assert(combined_normal.name == "Combined_normal", "Merged intermediate normal should be clearly named")
 assert(
