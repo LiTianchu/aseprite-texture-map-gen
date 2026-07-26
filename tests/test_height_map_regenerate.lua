@@ -67,8 +67,8 @@ local dialog = {
 		dump_intermediate_normal_map = false,
 		layer_shape = "Convex",
 		edge_strength = 1,
-		iteration_count = 64,
-		max_color_value_levels = 256,
+		height_max_iteration_count = 64,
+		height_max_color_value_levels = 256,
 	},
 	modifications = {},
 }
@@ -122,7 +122,7 @@ assert(
 )
 
 dialog.data.edge_strength = 0
-dialog.data.max_color_value_levels = 32
+dialog.data.height_max_color_value_levels = 32
 local flat_bottom = TextureMapUtils.create_height_image(horizontal_normal, 0, 64)
 local flat_top = TextureMapUtils.create_height_image(vertical_normal, 0, 64)
 HeightMapGenerator:regenerate_last()
@@ -135,7 +135,7 @@ assert(
 	"Regenerate should apply the current edge intensity to the upper output"
 )
 assert(HeightMapGenerator.pref.height_edge_strength == 0, "Regenerate should persist Edge Intensity")
-assert(HeightMapGenerator.pref.max_color_value_levels == 32, "Regenerate should persist Max Color Value Levels")
+assert(HeightMapGenerator.pref.height_max_color_value_levels == 32, "Regenerate should persist Max Color Value Levels")
 
 dialog.data.selected_layers_are_input = false
 dialog.data.input_layer = "Bottom"
@@ -160,7 +160,7 @@ dialog.data.input_type = "Color"
 dialog.data.dump_intermediate_normal_map = true
 dialog.data.layer_shape = "Convex"
 dialog.data.edge_strength = 1
-dialog.data.iteration_count = 32
+dialog.data.height_max_iteration_count = 32
 app.layer = top_input
 app.range.layers = { bottom_input, top_input }
 
@@ -195,7 +195,7 @@ assert(app.layer == combined_height, "The height result should become active ins
 
 dialog.data.layer_shape = "Concave"
 dialog.data.edge_strength = 2
-dialog.data.iteration_count = 16
+dialog.data.height_max_iteration_count = 16
 local regenerated_normal = TextureMapUtils.create_normal_image(combined_source, 2, "Concave")
 local regenerated_height = TextureMapUtils.create_height_image(regenerated_normal, 1, 16)
 HeightMapGenerator:regenerate_last()
@@ -208,8 +208,8 @@ assert(
 	"Regenerate should update height from the new intermediate settings"
 )
 assert(
-	HeightMapGenerator.pref.height_iteration_count == 16,
-	"Regenerate should persist the current slope iteration count"
+	HeightMapGenerator.pref.height_max_iteration_count == 16,
+	"Regenerate should persist Max Iterations"
 )
 
 local surviving_height = combined_height:cel(1).image:clone()

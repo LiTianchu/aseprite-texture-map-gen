@@ -68,7 +68,7 @@ function TextureMapGenerator:invalidate_regeneration()
 	self:set_regenerate_available(false)
 end
 
----@param data GenerationSettings The data from the dialog box
+---@param data LayerSelectionData Raw dialog data or sanitized settings containing layer-selection values
 function TextureMapGenerator:save_layer_preferences(data)
 	write_preference(self, "input_layer", data.input_layer)
 	write_preference(self, "selected_layers_are_input", data.selected_layers_are_input)

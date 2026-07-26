@@ -56,12 +56,13 @@ local preferences = {
 	input_layer = "Input",
 	edge_strength = 2,
 	layer_shape = "Concave",
+	normal_max_color_value_levels = 32,
 	input_type = "Color",
 	height_dump_intermediate_normal_map = true,
 	height_layer_shape = "Concave",
 	height_edge_strength = 3,
-	height_iteration_count = 8,
-	max_color_value_levels = 32,
+	height_max_iteration_count = 8,
+	height_max_color_value_levels = 32,
 }
 
 ---@diagnostic disable-next-line: missing-fields

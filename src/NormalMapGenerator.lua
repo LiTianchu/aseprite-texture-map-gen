@@ -20,7 +20,7 @@ local function parse_pref_settings(pref)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	local max_color_value_levels = pref.max_color_value_levels
+	local max_color_value_levels = tonumber(pref.normal_max_color_value_levels) or DEFAULT_MAX_COLOR_VALUE_LEVELS
 	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
 		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
 	end
@@ -35,7 +35,7 @@ local function parse_pref_settings(pref)
 	}
 end
 
----@param data NormalMapGenerationSettings The data table containing settings to be validated
+---@param data NormalMapDialogData The raw dialog data containing settings to be validated
 ---@return NormalMapGenerationSettings|nil settings The validated settings for the normal map generator, or nil if invalid
 ---@return string|nil error_message An error message if the settings are invalid, or nil if valid
 local function sanitize_dialog_settings(data)
@@ -52,7 +52,8 @@ local function sanitize_dialog_settings(data)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	local max_color_value_levels = data.max_color_value_levels
+	local max_color_value_levels =
+		tonumber(data.normal_max_color_value_levels) or DEFAULT_MAX_COLOR_VALUE_LEVELS
 	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
 		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
 	end
@@ -101,7 +102,7 @@ local NormalMapGenerator = TextureMapGenerator.new({
 			})
 			:separator({ id = "normal_map_gen_settings", text = "Normal Map Generation Settings" })
 			:number({
-				id = "max_color_value_levels",
+				id = "normal_max_color_value_levels",
 				label = "Color Value Levels (1-" .. MAX_COLOR_VALUE_LEVELS_CAP .. ")",
 				text = tostring(settings.max_color_value_levels),
 				decimals = 0,
@@ -110,9 +111,10 @@ local NormalMapGenerator = TextureMapGenerator.new({
 			:newrow()
 	end,
 	save_dialog_preferences = function(pref, data)
+		---@cast data NormalMapDialogData
 		pref.layer_shape = data.layer_shape
 		pref.edge_strength = data.edge_strength
-		pref.max_color_value_levels = data.max_color_value_levels
+		pref.normal_max_color_value_levels = data.normal_max_color_value_levels
 	end,
 	save_settings = function(pref, settings)
 		if not settings then
@@ -122,7 +124,7 @@ local NormalMapGenerator = TextureMapGenerator.new({
 		---@cast settings NormalMapGenerationSettings
 		pref.layer_shape = settings.layer_shape
 		pref.edge_strength = settings.edge_strength
-		pref.max_color_value_levels = settings.max_color_value_levels
+		pref.normal_max_color_value_levels = settings.max_color_value_levels
 	end,
 	create_outputs = function(source, settings, input_layers, is_combined) -- use polymorphic behavior to create outputs
 		if not settings then

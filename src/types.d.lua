@@ -1,23 +1,30 @@
 ---@meta
 
----@class GenerationSettings
+---Layer selection fields
+---@class LayerSelectionData
 ---@field public selected_layers_are_input boolean Whether the selected layers are used as input for generation
 ---@field public separate_layers boolean Whether to generate outputs for each input layer separately
 ---@field public input_layer string|nil The path of the input layer to use for generation when not using selected layers as input
 
+---Sanitized settings shared by every texture map generator
+---@class GenerationSettings : LayerSelectionData
+
+---Sanitized settings shared by normal map and height map generation
 ---@class SurfaceMapGenerationSettings : GenerationSettings
 ---@field public layer_shape string The assumed shape of the object in the input layers ("Convex" or "Concave")
----@field public edge_strength number The strength of the edge detection for normal map generation
+---@field public edge_strength number The strength of edge detection during surface-map generation
 ---@field public max_color_value_levels integer The max number of discrete color value levels in the final output
 
+---Sanitized height map settings produced from preferences or `HeightMapDialogData`
 ---@class HeightMapGenerationSettings : SurfaceMapGenerationSettings
 ---@field public edge_strength number The strength of the edge detection for height map generation
----@field public iteration_count integer The number of iterations for slope extraction
+---@field public max_iteration_count integer The maximum number of iterations for slope extraction
 ---@field public input_type string The type of input layers ("Color" or "Normal Map")
----@field public layer_shape string The assumed shape of the object in the input layers ("Convex " or "Concave")
+---@field public layer_shape string The assumed shape of the object in the input layers ("Convex" or "Concave")
 ---@field public dump_intermediate_normal_map boolean Whether to keep the intermediate normal map output
 ---@field public max_color_value_levels integer The max number of discrete color value levels in the final output
 
+---Sanitized normal map settings produced from preferences or `NormalMapDialogData`
 ---@class NormalMapGenerationSettings : SurfaceMapGenerationSettings
 ---@field public max_color_value_levels integer The max number of discrete color value levels in the final output
 
@@ -58,9 +65,9 @@
 ---@field generate_button_id string
 ---@field regenerate_button_id string
 ---@field parse_pref_settings fun(pref: table): GenerationSettings
----@field sanitize_dialog_settings fun(data: GenerationSettings): settings: GenerationSettings|nil, error_message: string|nil
+---@field sanitize_dialog_settings fun(data: HeightMapDialogData|NormalMapDialogData): settings: GenerationSettings|nil, error_message: string|nil
 ---@field add_settings_widgets fun(generator: TextureMapGenerator, dialog_box: Dialog, settings: GenerationSettings)
----@field save_dialog_preferences fun(pref: table, data: table)
+---@field save_dialog_preferences fun(pref: table, data: HeightMapDialogData|NormalMapDialogData)
 ---@field save_settings fun(pref: table, settings: GenerationSettings|nil)
 ---@field job_metadata? fun(settings: table): table|nil
 ---@field create_outputs fun(source: Image, settings: GenerationSettings|nil, input_layers: Layer[], is_combined: boolean, metadata?: table): GenerationJobOutput[]

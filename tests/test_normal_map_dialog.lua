@@ -125,7 +125,7 @@ assert(dialog.widgets_by_id.input_layer.select == nil, "The unsupported select c
 assert(dialog.show_options.wait == false, "The dialog should remain non-modal")
 assert(dialog.show_options.bounds == nil, "The dialog should use Aseprite's content-based minimum size")
 assert(
-	dialog.widgets_by_id.max_color_value_levels.decimals == 0,
+	dialog.widgets_by_id.normal_max_color_value_levels.decimals == 0,
 	"Max Color Value Levels should be a whole-number input"
 )
 

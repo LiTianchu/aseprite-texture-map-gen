@@ -66,7 +66,7 @@ local dialog = {
 		input_layer = "Bottom",
 		layer_shape = "Convex",
 		edge_strength = 1,
-		max_color_value_levels = 16,
+		normal_max_color_value_levels = 16,
 	},
 	modifications = {},
 }
@@ -107,7 +107,7 @@ assert(bottom_output.stackIndex == bottom_input.stackIndex + 1, "The bottom outp
 assert(top_output.stackIndex == top_input.stackIndex + 1, "The top output should be directly above its input")
 
 dialog.data.edge_strength = 2
-dialog.data.max_color_value_levels = 16
+dialog.data.normal_max_color_value_levels = 16
 dialog.data.layer_shape = "Concave"
 local expected_bottom = expected_normal(sprite, { bottom_input }, 2, "Concave")
 local expected_top = expected_normal(sprite, { top_input }, 2, "Concave")
@@ -119,7 +119,10 @@ assert(
 )
 assert(top_output:cel(1).image:isEqual(expected_top), "Regenerate should update the output paired with the top input")
 assert(NormalMapGenerator.pref.edge_strength == 2, "Regenerate should use the current Edge Height")
-assert(NormalMapGenerator.pref.max_color_value_levels == 16, "Regenerate should use the current Max Color Value Levels")
+assert(
+	NormalMapGenerator.pref.normal_max_color_value_levels == 16,
+	"Regenerate should use the current Max Color Value Levels"
+)
 assert(NormalMapGenerator.pref.layer_shape == "Concave", "Regenerate should use the current Object Shape")
 
 sprite:deleteCel(bottom_output, 1)

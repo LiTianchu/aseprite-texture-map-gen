@@ -93,10 +93,14 @@ app = {
 	end,
 }
 
----@diagnostic disable: missing-fields
-HeightMapGenerator:show_dialog({
-	preferences = {},
-})
+---@type table
+local preferences = {}
+---@diagnostic disable-next-line: missing-fields
+local plugin = {
+	preferences = preferences,
+}
+
+HeightMapGenerator:show_dialog(plugin)
 
 assert(dialog, "The height-map dialog should be created")
 assert(dialog.widgets_by_id.input_type.option == "Color", "Normal Map should be the default input interpretation")
@@ -105,15 +109,35 @@ assert(
 	"Keeping an intermediate normal should start enabled for color input"
 )
 assert(dialog.widgets_by_id.layer_shape.enabled == true, "Color Object Shape should be available for color input")
-assert(dialog.widgets_by_id.iteration_count.decimals == 0, "Slope Iterations should be a whole-number input")
 assert(
-	dialog.widgets_by_id.iteration_count.label:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
+	dialog.widgets_by_id.height_max_iteration_count.decimals == 0,
+	"Max Iterations should be a whole-number input"
+)
+assert(
+	dialog.widgets_by_id.height_max_iteration_count.label:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
 	"The iteration input should display its safety cap"
 )
 assert(dialog.widgets_by_id.input_layer.onchange, "The single-layer picker should be selectable")
 assert(
-	dialog.widgets_by_id.max_color_value_levels.decimals == 0,
+	dialog.widgets_by_id.height_max_color_value_levels.decimals == 0,
 	"Max Color Value Levels should be a whole-number input"
+)
+
+dialog.data.height_max_iteration_count = 37
+dialog.data.height_max_color_value_levels = 48
+dialog.config.onclose()
+
+assert(preferences.height_max_iteration_count == 37, "Closing the dialog should save Max Iterations")
+assert(preferences.height_max_color_value_levels == 48, "Closing the dialog should save Max Color Value Levels")
+
+HeightMapGenerator:show_dialog(plugin)
+assert(
+	dialog.widgets_by_id.height_max_iteration_count.text == "37",
+	"Reopening the dialog should restore Max Iterations"
+)
+assert(
+	dialog.widgets_by_id.height_max_color_value_levels.text == "48",
+	"Reopening the dialog should restore Max Color Value Levels"
 )
 
 assert(dialog.widgets_by_id.separate_layers, "Separate generation should be available")
@@ -149,7 +173,7 @@ assert(
 )
 
 dialog.data.edge_strength = 1
-dialog.data.iteration_count = MAX_ITERATION_COUNT_CAP + 1
+dialog.data.height_max_iteration_count = MAX_ITERATION_COUNT_CAP + 1
 HeightMapGenerator:generate_from_dialog()
 assert(alert, "An iteration count over the cap should display an alert")
 assert(
