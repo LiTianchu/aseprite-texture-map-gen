@@ -37,7 +37,11 @@ dialog and uses the layer and map settings saved in the plugin preferences.
 
 ### Normal Map Generation
 
-**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Normal Map` > `Generate Normal Map (Dialog)`
+**Quick Command Location:** : `Edit` > `FX` > `Texture Map Generator` > `Normal Map` > `Quick Generate Normal Map`  
+**Dialog Panel Location**: `Edit` > `FX` > `Texture Map Generator` > `Normal Map` > `Generate Normal Map (Dialog)`  
+
+<sub>*Note: Quick Command generates the texture map with settings set in the Dialog Panel*</sub>
+<sub>*Note: It is recommended to add the Quick Command to your keybinds via `Edit` -> `Keyboard Shortcuts` -> `Menus`*</sub>
 
 #### Dialog
 
@@ -59,7 +63,11 @@ dialog and uses the layer and map settings saved in the plugin preferences.
 
 ### Height Map Generation
 
-**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Height Map` > `Generate Height Map (Dialog)`
+**Quick Command Location**: `Edit` > `FX` > `Texture Map Generator` > `Height Map` > `Quick Generate Height Map`  
+**Dialog Panel Location**: `Edit` > `FX` > `Texture Map Generator` > `Height Map` > `Generate Height Map (Dialog)`  
+
+<sub>*Note: Quick Command generates the texture map with settings set in the Dialog Panel*</sub>
+<sub>*Note: It is recommended to add the Quick Command to your keybinds via `Edit` -> `Keyboard Shortcuts` -> `Menus`*</sub>
 
 #### Dialog
 
@@ -117,4 +125,4 @@ your_path_to_aseprite_executable -b --script ./tests/test_normal_map.lua
 lua ./tests/test_normal_map.lua
 ```
 
-*Note: Make sure [Lua 5.4](https://www.lua.org/versions.html#5.4) is installed  
+<sub>*Note: Make sure [Lua 5.4](https://www.lua.org/versions.html#5.4) is installed*</sub>
