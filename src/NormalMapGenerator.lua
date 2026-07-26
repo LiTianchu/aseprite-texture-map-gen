@@ -1,6 +1,8 @@
 local TextureMapGenerator = require("src.TextureMapGenerator")
 local TextureMapUtils = require("src.TextureMapUtils")
 
+local DEFAULT_MAX_COLOR_VALUE_LEVELS = 16
+local MAX_COLOR_VALUE_LEVELS_CAP = 256
 local DEFAULT_EDGE_STRENGTH = 1.0
 local DEFAULT_LAYER_SHAPE = "Convex"
 local LAYER_SHAPES = { "Convex", "Concave" }
@@ -18,12 +20,18 @@ local function parse_pref_settings(pref)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
+	local max_color_value_levels = pref.max_color_value_levels
+	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
+		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
+	end
+
 	return {
 		selected_layers_are_input = pref.selected_layers_are_input ~= false,
 		separate_layers = pref.separate_layers ~= false,
 		input_layer = pref.input_layer,
 		edge_strength = edge_strength,
 		layer_shape = layer_shape,
+		max_color_value_levels = max_color_value_levels,
 	}
 end
 
@@ -44,12 +52,17 @@ local function sanitize_dialog_settings(data)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
+	local max_color_value_levels = data.max_color_value_levels
+	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
+		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
+	end
 	return {
 		selected_layers_are_input = selected_layers_are_input,
 		separate_layers = separate_layers,
 		input_layer = data.input_layer,
 		edge_strength = edge_strength,
 		layer_shape = layer_shape,
+		max_color_value_levels = max_color_value_levels,
 	}
 end
 
@@ -86,10 +99,20 @@ local NormalMapGenerator = TextureMapGenerator.new({
 				text = tostring(settings.edge_strength),
 				decimals = 2,
 			})
+			:separator({ id = "normal_map_gen_settings", text = "Normal Map Generation Settings" })
+			:number({
+				id = "max_color_value_levels",
+				label = "Color Value Levels (1-" .. MAX_COLOR_VALUE_LEVELS_CAP .. ")",
+				text = tostring(settings.max_color_value_levels),
+				decimals = 0,
+				hexpand = true,
+			})
+			:newrow()
 	end,
 	save_dialog_preferences = function(pref, data)
 		pref.layer_shape = data.layer_shape
 		pref.edge_strength = data.edge_strength
+		pref.max_color_value_levels = data.max_color_value_levels
 	end,
 	save_settings = function(pref, settings)
 		if not settings then
@@ -99,6 +122,7 @@ local NormalMapGenerator = TextureMapGenerator.new({
 		---@cast settings NormalMapGenerationSettings
 		pref.layer_shape = settings.layer_shape
 		pref.edge_strength = settings.edge_strength
+		pref.max_color_value_levels = settings.max_color_value_levels
 	end,
 	create_outputs = function(source, settings, input_layers, is_combined) -- use polymorphic behavior to create outputs
 		if not settings then
@@ -112,8 +136,8 @@ local NormalMapGenerator = TextureMapGenerator.new({
 			{
 				key = "primary",
 				content = {
-						name = name,
-						image = TextureMapUtils.create_normal_image(source, settings.edge_strength, settings.layer_shape),
+					name = name,
+					image = TextureMapUtils.create_normal_image(source, settings.edge_strength, settings.layer_shape),
 				},
 			},
 		}

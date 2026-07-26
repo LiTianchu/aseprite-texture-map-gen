@@ -2,8 +2,10 @@ local TextureMapGenerator = require("src.TextureMapGenerator")
 local TextureMapUtils = require("src.TextureMapUtils")
 
 local DEFAULT_EDGE_STRENGTH = 32.0
-local DEFAULT_ITERATION_COUNT = 128
-local MAX_ITERATION_COUNT = 512
+local DEFAULT_MAX_ITERATION_COUNT = 128
+local DEFAULT_MAX_COLOR_VALUE_LEVELS = 16
+local MAX_COLOR_VALUE_LEVELS_CAP = 256
+local MAX_ITERATION_COUNT_CAP = 512
 local DEFAULT_INPUT_TYPE = "Color"
 local INPUT_TYPES = { "Color", "Normal Map" }
 local DEFAULT_LAYER_SHAPE = "Convex"
@@ -29,9 +31,9 @@ local function parse_pref_settings(pref)
 		edge_strength = DEFAULT_EDGE_STRENGTH
 	end
 
-	local iteration_count = tonumber(pref.height_iteration_count) or DEFAULT_ITERATION_COUNT
-	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT) then
-		iteration_count = DEFAULT_ITERATION_COUNT
+	local iteration_count = tonumber(pref.height_iteration_count) or DEFAULT_MAX_ITERATION_COUNT
+	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT_CAP) then
+		iteration_count = DEFAULT_MAX_ITERATION_COUNT
 	end
 
 	local input_type = pref.input_type
@@ -49,6 +51,11 @@ local function parse_pref_settings(pref)
 		dump_intermediate_normal_map = false
 	end
 
+	local max_color_value_levels = pref.max_color_value_levels
+	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
+		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
+	end
+
 	---@type HeightMapGenerationSettings
 	local settings = {
 		selected_layers_are_input = pref.selected_layers_are_input ~= false,
@@ -59,6 +66,7 @@ local function parse_pref_settings(pref)
 		input_type = input_type,
 		layer_shape = layer_shape,
 		dump_intermediate_normal_map = dump_intermediate_normal_map,
+		max_color_value_levels = max_color_value_levels,
 	}
 	return settings
 end
@@ -75,9 +83,9 @@ local function sanitize_dialog_settings(data)
 		return nil, "Edge Intensity must be zero or a positive number."
 	end
 
-	local iteration_count = tonumber(data.iteration_count) or DEFAULT_ITERATION_COUNT
-	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT) then
-		return nil, "Slope Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT .. "."
+	local iteration_count = tonumber(data.iteration_count) or DEFAULT_MAX_ITERATION_COUNT
+	if not TextureMapUtils.valid_iteration_count(iteration_count, MAX_ITERATION_COUNT_CAP) then
+		return nil, "Slope Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT_CAP .. "."
 	end
 
 	local input_type = data.input_type
@@ -90,6 +98,11 @@ local function sanitize_dialog_settings(data)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
+	local max_color_value_levels = data.max_color_value_levels
+	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
+		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
+	end
+
 	---@type HeightMapGenerationSettings
 	local sanized_dialog_settings = {
 		selected_layers_are_input = selected_layers_are_input,
@@ -100,6 +113,7 @@ local function sanitize_dialog_settings(data)
 		input_type = input_type,
 		layer_shape = layer_shape,
 		dump_intermediate_normal_map = input_type == "Color" and data.dump_intermediate_normal_map == true,
+		max_color_value_levels = max_color_value_levels,
 	}
 
 	return sanized_dialog_settings
@@ -138,7 +152,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		end
 
 		dialog_box
-			:separator({ id = "height_input_interpretation", text = "Input Format" })
+			:separator({ id = "height_input_format", text = "Input Format" })
 			:combobox({
 				id = "input_type",
 				label = "Treat Layers As",
@@ -151,7 +165,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 				end,
 			})
 			:newrow()
-			:separator({ id = "height_color_input_options", text = "Ground Truth Assumptions" })
+			:separator({ id = "height_ground_truth_assumptions", text = "Ground Truth Assumptions" })
 			:combobox({
 				id = "layer_shape",
 				label = "Object Shape",
@@ -169,7 +183,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 				hexpand = true,
 			})
 			:newrow()
-			:separator({ id = "height_slope_extraction", text = "Height Map Generation Settings" })
+			:separator({ id = "height_map_gen_settings", text = "Height Map Generation Settings" })
 			:check({
 				id = "dump_intermediate_normal_map",
 				label = "Intermediate Output",
@@ -183,8 +197,16 @@ local HeightMapGenerator = TextureMapGenerator.new({
 			:newrow()
 			:number({
 				id = "iteration_count",
-				label = "Max Iterations (1-" .. MAX_ITERATION_COUNT .. ")",
+				label = "Max Iterations (1-" .. MAX_ITERATION_COUNT_CAP .. ")",
 				text = tostring(settings.iteration_count),
+				decimals = 0,
+				hexpand = true,
+			})
+			:newrow()
+			:number({
+				id = "max_color_value_levels",
+				label = "Color Value Levels (1-" .. MAX_COLOR_VALUE_LEVELS_CAP .. ")",
+				text = tostring(settings.max_color_value_levels),
 				decimals = 0,
 				hexpand = true,
 			})
@@ -195,6 +217,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		pref.height_layer_shape = data.layer_shape
 		pref.height_edge_strength = data.edge_strength
 		pref.height_iteration_count = data.iteration_count
+		pref.max_color_value_levels = data.max_color_value_levels
 	end,
 	save_settings = function(pref, settings)
 		if not settings then
@@ -207,7 +230,8 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		pref.height_dump_intermediate_normal_map = settings.dump_intermediate_normal_map or false
 		pref.height_layer_shape = settings.layer_shape or DEFAULT_LAYER_SHAPE
 		pref.height_edge_strength = settings.edge_strength or DEFAULT_EDGE_STRENGTH
-		pref.height_iteration_count = settings.iteration_count or DEFAULT_ITERATION_COUNT
+		pref.height_iteration_count = settings.iteration_count or DEFAULT_MAX_ITERATION_COUNT
+		pref.max_color_value_levels = settings.max_color_value_levels or DEFAULT_MAX_COLOR_VALUE_LEVELS
 	end,
 	job_metadata = function(settings)
 		return {

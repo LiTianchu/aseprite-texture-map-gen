@@ -68,6 +68,7 @@ local dialog = {
 		layer_shape = "Convex",
 		edge_strength = 1,
 		iteration_count = 64,
+		max_color_value_levels = 256,
 	},
 	modifications = {},
 }
@@ -121,6 +122,7 @@ assert(
 )
 
 dialog.data.edge_strength = 0
+dialog.data.max_color_value_levels = 32
 local flat_bottom = TextureMapUtils.create_height_image(horizontal_normal, 0, 64)
 local flat_top = TextureMapUtils.create_height_image(vertical_normal, 0, 64)
 HeightMapGenerator:regenerate_last()
@@ -133,6 +135,7 @@ assert(
 	"Regenerate should apply the current edge intensity to the upper output"
 )
 assert(HeightMapGenerator.pref.height_edge_strength == 0, "Regenerate should persist Edge Intensity")
+assert(HeightMapGenerator.pref.max_color_value_levels == 32, "Regenerate should persist Max Color Value Levels")
 
 dialog.data.selected_layers_are_input = false
 dialog.data.input_layer = "Bottom"

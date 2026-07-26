@@ -8,6 +8,7 @@
 ---@class SurfaceMapGenerationSettings : GenerationSettings
 ---@field public layer_shape string The assumed shape of the object in the input layers ("Convex" or "Concave")
 ---@field public edge_strength number The strength of the edge detection for normal map generation
+---@field public max_color_value_levels integer The max number of discrete color value levels in the final output
 
 ---@class HeightMapGenerationSettings : SurfaceMapGenerationSettings
 ---@field public edge_strength number The strength of the edge detection for height map generation
@@ -15,8 +16,10 @@
 ---@field public input_type string The type of input layers ("Color" or "Normal Map")
 ---@field public layer_shape string The assumed shape of the object in the input layers ("Convex " or "Concave")
 ---@field public dump_intermediate_normal_map boolean Whether to keep the intermediate normal map output
+---@field public max_color_value_levels integer The max number of discrete color value levels in the final output
 
 ---@class NormalMapGenerationSettings : SurfaceMapGenerationSettings
+---@field public max_color_value_levels integer The max number of discrete color value levels in the final output
 
 ---@class LayerImagePair
 ---@field public layer? Layer The Aseprite layer, once the output has been inserted into a sprite

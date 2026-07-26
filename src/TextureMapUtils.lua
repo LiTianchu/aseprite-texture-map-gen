@@ -32,6 +32,16 @@ function TextureMapUtils.valid_layer_shape(shape_name, layer_shapes)
 	return false
 end
 
+---@param num_levels number The color value levels to validate
+---@param max_levels integer The maximum allowed color value levels
+---@return boolean is_valid true if the color value level num is in 1..MAX_COLOR_VALUE_LEVELS_CAP, false otherwise
+function TextureMapUtils.valid_color_value_levels(num_levels, max_levels)
+	if type(num_levels) ~= "number" then
+		return false
+	end
+	return num_levels >= 1 and num_levels <= max_levels
+end
+
 ---@param band number[] The texture band to sample from, represented as a 1D array of pixel values
 ---@param width integer The width of the texture
 ---@param height integer The height of the texture

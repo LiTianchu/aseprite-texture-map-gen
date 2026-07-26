@@ -124,6 +124,10 @@ assert(
 assert(dialog.widgets_by_id.input_layer.select == nil, "The unsupported select callback should not be used")
 assert(dialog.show_options.wait == false, "The dialog should remain non-modal")
 assert(dialog.show_options.bounds == nil, "The dialog should use Aseprite's content-based minimum size")
+assert(
+	dialog.widgets_by_id.max_color_value_levels.decimals == 0,
+	"Max Color Value Levels should be a whole-number input"
+)
 
 ---@diagnostic disable: missing-fields
 NormalMapGenerator.last_generation = {

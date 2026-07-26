@@ -6,7 +6,7 @@ package.path = "./?.lua;" .. package.path
 -- "your_path_to_aseprite_binary" -b --script tests/test_height_map_dialog.lua
 
 local HeightMapGenerator = require("src.HeightMapGenerator")
-local MAX_ITERATION_COUNT = 512
+local MAX_ITERATION_COUNT_CAP = 512
 
 local dialog
 
@@ -107,10 +107,15 @@ assert(
 assert(dialog.widgets_by_id.layer_shape.enabled == true, "Color Object Shape should be available for color input")
 assert(dialog.widgets_by_id.iteration_count.decimals == 0, "Slope Iterations should be a whole-number input")
 assert(
-	dialog.widgets_by_id.iteration_count.label:find(tostring(MAX_ITERATION_COUNT), 1, true),
+	dialog.widgets_by_id.iteration_count.label:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
 	"The iteration input should display its safety cap"
 )
 assert(dialog.widgets_by_id.input_layer.onchange, "The single-layer picker should be selectable")
+assert(
+	dialog.widgets_by_id.max_color_value_levels.decimals == 0,
+	"Max Color Value Levels should be a whole-number input"
+)
+
 assert(dialog.widgets_by_id.separate_layers, "Separate generation should be available")
 assert(dialog.widgets_by_id.regenerate_height_map.enabled == false, "Regenerate should start disabled")
 assert(dialog.show_options.wait == false, "The height-map dialog should remain non-modal")
@@ -144,11 +149,11 @@ assert(
 )
 
 dialog.data.edge_strength = 1
-dialog.data.iteration_count = MAX_ITERATION_COUNT + 1
+dialog.data.iteration_count = MAX_ITERATION_COUNT_CAP + 1
 HeightMapGenerator:generate_from_dialog()
 assert(alert, "An iteration count over the cap should display an alert")
 assert(
-	alert.text:find(tostring(MAX_ITERATION_COUNT), 1, true),
+	alert.text:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
 	"The cap alert should explain the maximum accepted iteration count"
 )
 

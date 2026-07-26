@@ -61,6 +61,7 @@ local preferences = {
 	height_layer_shape = "Concave",
 	height_edge_strength = 3,
 	height_iteration_count = 8,
+	max_color_value_levels = 32,
 }
 
 ---@diagnostic disable-next-line: missing-fields
