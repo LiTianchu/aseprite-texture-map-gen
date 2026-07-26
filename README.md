@@ -32,8 +32,7 @@ chmod +x ./build.sh && ./build.sh
 
 ## Using the Extension
 
-Each texture-map submenu provides a `Dialog` command and a `Quick Generate` command. Quick generation skips the
-dialog and uses the layer and map settings saved in each `Dialog` form.
+Each texture-map submenu provides a `Dialog` command and a `Quick Generate` command. Quick generation skips the dialog and uses the settings saved in each `Dialog` form.  
 
 <small>*Note: Quick Command generates the texture map with settings set in the Dialog Panel*</small>  
 <small>*Note: Recommended to add the Quick Commands to your keybinds via `Edit` -> `Keyboard Shortcuts` -> `Menus`*</small>  
