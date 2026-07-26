@@ -83,10 +83,15 @@ local function sanitize_dialog_settings(data)
 		return nil, "Edge Intensity must be zero or a positive number."
 	end
 
-	local max_iteration_count = tonumber(data.height_max_iteration_count) or DEFAULT_MAX_ITERATION_COUNT
+	local max_iteration_count = tonumber(data.height_max_iteration_count)
 	if not TextureMapUtils.valid_iteration_count(max_iteration_count, MAX_ITERATION_COUNT_CAP) then
 		return nil, "Max Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT_CAP .. "."
 	end
+
+	assert(
+		max_iteration_count ~= nil,
+		"Max Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT_CAP .. "."
+	)
 
 	local input_type = data.input_type
 	if not valid_input_type(input_type, INPUT_TYPES) then
@@ -98,10 +103,15 @@ local function sanitize_dialog_settings(data)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	local max_color_value_levels = tonumber(data.height_max_color_value_levels) or DEFAULT_MAX_COLOR_VALUE_LEVELS
+	local max_color_value_levels = tonumber(data.height_max_color_value_levels)
 	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
-		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
+		return nil, "Color Value Levels must be a whole number from 1 to " .. MAX_COLOR_VALUE_LEVELS_CAP .. "."
 	end
+
+	assert(
+		max_color_value_levels ~= nil,
+		"Color Value Levels must be a whole number from 1 to " .. MAX_COLOR_VALUE_LEVELS_CAP .. "."
+	)
 
 	---@type HeightMapGenerationSettings
 	local sanized_dialog_settings = {

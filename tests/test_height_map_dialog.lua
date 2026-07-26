@@ -100,6 +100,7 @@ local plugin = {
 	preferences = preferences,
 }
 
+---@diagnostic disable-next-line: param-type-mismatch
 HeightMapGenerator:show_dialog(plugin)
 
 assert(dialog, "The height-map dialog should be created")
@@ -109,10 +110,7 @@ assert(
 	"Keeping an intermediate normal should start enabled for color input"
 )
 assert(dialog.widgets_by_id.layer_shape.enabled == true, "Color Object Shape should be available for color input")
-assert(
-	dialog.widgets_by_id.height_max_iteration_count.decimals == 0,
-	"Max Iterations should be a whole-number input"
-)
+assert(dialog.widgets_by_id.height_max_iteration_count.decimals == 0, "Max Iterations should be a whole-number input")
 assert(
 	dialog.widgets_by_id.height_max_iteration_count.label:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
 	"The iteration input should display its safety cap"
@@ -130,6 +128,7 @@ dialog.config.onclose()
 assert(preferences.height_max_iteration_count == 37, "Closing the dialog should save Max Iterations")
 assert(preferences.height_max_color_value_levels == 48, "Closing the dialog should save Max Color Value Levels")
 
+---@diagnostic disable-next-line: param-type-mismatch
 HeightMapGenerator:show_dialog(plugin)
 assert(
 	dialog.widgets_by_id.height_max_iteration_count.text == "37",
@@ -145,9 +144,8 @@ assert(dialog.widgets_by_id.regenerate_height_map.enabled == false, "Regenerate 
 assert(dialog.show_options.wait == false, "The height-map dialog should remain non-modal")
 assert(dialog.show_options.bounds == nil, "The height-map dialog should size itself to its controls")
 
-HeightMapGenerator.last_generation = {
-	jobs = { {} },
-}
+---@diagnostic disable-next-line: missing-fields
+HeightMapGenerator.last_generation = { jobs = { {} } }
 HeightMapGenerator.regenerate_available = true
 dialog.data.input_type = "Color"
 dialog.widgets_by_id.input_type.onchange()
@@ -163,9 +161,8 @@ assert(
 	"Invalidating height regeneration should disable its button immediately"
 )
 
-HeightMapGenerator.last_generation = {
-	jobs = { {} },
-}
+---@diagnostic disable-next-line: missing-fields
+HeightMapGenerator.last_generation = { jobs = { {} } }
 dialog.widgets_by_id.dump_intermediate_normal_map.onclick()
 assert(
 	HeightMapGenerator.last_generation == nil,

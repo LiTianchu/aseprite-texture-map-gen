@@ -24,7 +24,8 @@ end
 local function expected_normal(sprite, input_layers, edge_strength, layer_shape, frame_number)
 	local source, has_cel = AsepriteLayerUtils.render_layers(sprite, input_layers, frame_number or 1)
 	assert(has_cel, "Expected every test input to have a cel")
-	return TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
+	local generated_image = TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
+	return TextureMapUtils.quantize_image(generated_image, 16)
 end
 
 local horizontal_gradient = {

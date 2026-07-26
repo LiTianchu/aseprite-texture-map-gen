@@ -52,10 +52,10 @@ local function sanitize_dialog_settings(data)
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	local max_color_value_levels =
-		tonumber(data.normal_max_color_value_levels) or DEFAULT_MAX_COLOR_VALUE_LEVELS
+	local max_color_value_levels = tonumber(data.normal_max_color_value_levels)
 	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, MAX_COLOR_VALUE_LEVELS_CAP) then
-		max_color_value_levels = DEFAULT_MAX_COLOR_VALUE_LEVELS
+		return nil,
+			"Color Value Levels must be a whole number from 1 to " .. MAX_COLOR_VALUE_LEVELS_CAP .. "."
 	end
 	return {
 		selected_layers_are_input = selected_layers_are_input,

@@ -12,6 +12,7 @@ local TextureMapUtils = require("src.TextureMapUtils")
 assert(app and app.pixelColor, "Run this test with Aseprite")
 
 local function grayscale_image(values)
+	---@diagnostic disable-next-line: param-type-mismatch
 	local image = Image(3, 3, ColorMode.RGB)
 	for index, value in ipairs(values) do
 		local x = (index - 1) % 3
@@ -49,6 +50,7 @@ local vertical_color = grayscale_image(vertical_gradient)
 local horizontal_normal = TextureMapUtils.create_normal_image(horizontal_color, 1, "Convex")
 local vertical_normal = TextureMapUtils.create_normal_image(vertical_color, 1, "Convex")
 
+---@diagnostic disable-next-line: param-type-mismatch
 local sprite = Sprite(3, 3, ColorMode.RGB)
 local bottom_input = sprite:newLayer()
 bottom_input.name = "Bottom"
@@ -83,6 +85,8 @@ HeightMapGenerator.layer_path_dict = {
 	Bottom = bottom_input,
 	Top = top_input,
 }
+
+---@diagnostic disable-next-line: assign-type-mismatch
 HeightMapGenerator.dialog_box = dialog
 HeightMapGenerator.last_generation = nil
 HeightMapGenerator.regenerate_available = false
@@ -123,8 +127,8 @@ assert(
 
 dialog.data.edge_strength = 0
 dialog.data.height_max_color_value_levels = 32
-local flat_bottom = TextureMapUtils.create_height_image(horizontal_normal, 0, 64)
-local flat_top = TextureMapUtils.create_height_image(vertical_normal, 0, 64)
+local flat_bottom = TextureMapUtils.quantize_image(TextureMapUtils.create_height_image(horizontal_normal, 0, 64), 32)
+local flat_top = TextureMapUtils.quantize_image(TextureMapUtils.create_height_image(vertical_normal, 0, 64), 32)
 HeightMapGenerator:regenerate_last()
 assert(
 	bottom_height:cel(1).image:isEqual(flat_bottom),
@@ -166,8 +170,10 @@ app.range.layers = { bottom_input, top_input }
 
 local combined_source, has_combined_cels = AsepriteLayerUtils.render_layers(sprite, { bottom_input, top_input }, 1)
 assert(has_combined_cels, "The combined color inputs should both contain cels")
-local expected_combined_normal = TextureMapUtils.create_normal_image(combined_source, 1, "Convex")
-local expected_combined_height = TextureMapUtils.create_height_image(expected_combined_normal, 1, 32)
+local generated_combined_normal = TextureMapUtils.create_normal_image(combined_source, 1, "Convex")
+local expected_combined_normal = TextureMapUtils.quantize_image(generated_combined_normal, 32)
+local expected_combined_height =
+	TextureMapUtils.quantize_image(TextureMapUtils.create_height_image(generated_combined_normal, 1, 32), 32)
 
 HeightMapGenerator:generate_from_dialog()
 local combined_generation = HeightMapGenerator.last_generation
@@ -196,8 +202,10 @@ assert(app.layer == combined_height, "The height result should become active ins
 dialog.data.layer_shape = "Concave"
 dialog.data.edge_strength = 2
 dialog.data.height_max_iteration_count = 16
-local regenerated_normal = TextureMapUtils.create_normal_image(combined_source, 2, "Concave")
-local regenerated_height = TextureMapUtils.create_height_image(regenerated_normal, 1, 16)
+local generated_regenerated_normal = TextureMapUtils.create_normal_image(combined_source, 2, "Concave")
+local regenerated_normal = TextureMapUtils.quantize_image(generated_regenerated_normal, 32)
+local regenerated_height =
+	TextureMapUtils.quantize_image(TextureMapUtils.create_height_image(generated_regenerated_normal, 1, 16), 32)
 HeightMapGenerator:regenerate_last()
 assert(
 	combined_normal:cel(1).image:isEqual(regenerated_normal),
@@ -207,10 +215,7 @@ assert(
 	combined_height:cel(1).image:isEqual(regenerated_height),
 	"Regenerate should update height from the new intermediate settings"
 )
-assert(
-	HeightMapGenerator.pref.height_max_iteration_count == 16,
-	"Regenerate should persist Max Iterations"
-)
+assert(HeightMapGenerator.pref.height_max_iteration_count == 16, "Regenerate should persist Max Iterations")
 
 local surviving_height = combined_height:cel(1).image:clone()
 sprite:deleteLayer(combined_normal)

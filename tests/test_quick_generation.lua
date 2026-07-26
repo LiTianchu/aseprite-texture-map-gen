@@ -56,13 +56,13 @@ local preferences = {
 	input_layer = "Input",
 	edge_strength = 2,
 	layer_shape = "Concave",
-	normal_max_color_value_levels = 32,
+	normal_max_color_value_levels = 4,
 	input_type = "Color",
 	height_dump_intermediate_normal_map = true,
 	height_layer_shape = "Concave",
 	height_edge_strength = 3,
 	height_max_iteration_count = 8,
-	height_max_color_value_levels = 32,
+	height_max_color_value_levels = 4,
 }
 
 ---@diagnostic disable-next-line: missing-fields
@@ -85,10 +85,11 @@ NormalMapGenerator:generate_from_preferences(plugin)
 
 local normal_output_layer = find_layer_by_name(sprite, "Input_normal")
 assert(normal_output_layer, "Quick normal-map generation should create an output layer")
-local expected_normal_image = TextureMapUtils.create_normal_image(source_image, 2, "Concave")
+local generated_normal_image = TextureMapUtils.create_normal_image(source_image, 2, "Concave")
+local expected_normal_image = TextureMapUtils.quantize_image(generated_normal_image, 4)
 assert(
 	normal_output_layer:cel(1).image:isEqual(expected_normal_image),
-	"Quick normal-map generation should use the saved edge intensity and object shape"
+	"Quick normal-map generation should use the saved shape, intensity, and color levels"
 )
 assert(app.layer == normal_output_layer, "Quick normal-map generation should activate its output")
 
@@ -100,10 +101,11 @@ HeightMapGenerator:generate_from_preferences(plugin)
 local height_output_layer = find_layer_by_name(sprite, "Input_height")
 assert(height_output_layer, "Quick height-map generation should create an output layer")
 local expected_height_normal_image = TextureMapUtils.create_normal_image(source_image, 3, "Concave")
-local expected_height_image = TextureMapUtils.create_height_image(expected_height_normal_image, 1, 8)
+local generated_height_image = TextureMapUtils.create_height_image(expected_height_normal_image, 1, 8)
+local expected_height_image = TextureMapUtils.quantize_image(generated_height_image, 4)
 assert(
 	height_output_layer:cel(1).image:isEqual(expected_height_image),
-	"Quick height-map generation should use the saved input type, shape, intensity, and iteration count"
+	"Quick height-map generation should use the saved input, shape, intensity, iterations, and color levels"
 )
 assert(
 	height_output_layer.stackIndex == input_layer.stackIndex + 2,

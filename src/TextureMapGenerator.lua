@@ -1,5 +1,6 @@
 local AsepriteLayerUtils = require("src.AsepriteLayerUtils")
 local AsepriteUIUtils = require("src.AsepriteUIUtils")
+local TextureMapUtils = require("src.TextureMapUtils")
 
 --- The abstract base class for generating texture maps from image layers in Aseprite
 --- Inherited by specific texture map generators like NormalMapGenerator and HeightMapGenerator
@@ -239,6 +240,23 @@ function TextureMapGenerator:input_layers_from_settings(settings)
 	return single_input_layer and { single_input_layer } or {}
 end
 
+---Create generated outputs and apply quantization
+---@param source Image The rendered source image for the generation job
+---@param settings GenerationSettings The sanitized generator settings
+---@param input_layers Layer[] The input layers used by the generation job
+---@param is_combined boolean Whether the inputs were combined into one source
+---@param metadata table|nil Generator specific metadata retained for regeneration
+---@return GenerationJobOutput[] final_outputs The final outputs
+function TextureMapGenerator:create_final_outputs(source, settings, input_layers, is_combined, metadata)
+	---@cast settings SurfaceMapGenerationSettings
+	local generated_outputs = self.config.create_outputs(source, settings, input_layers, is_combined, metadata)
+	for _, output in ipairs(generated_outputs) do
+		output.content.image =
+			TextureMapUtils.quantize_image(output.content.image, settings.max_color_value_levels)
+	end
+	return generated_outputs
+end
+
 ---@param ordered_layers Layer[] The ordered input layers to generate from
 ---@param frame_number integer The frame number selected from the ordered_layers input
 ---@param settings GenerationSettings|nil The settings for the generation
@@ -279,8 +297,13 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 
 		source_job.metadata = self.config.job_metadata and self.config.job_metadata(settings) or nil
 
-		source_job.outputs =
-			self.config.create_outputs(source, settings, source_job.input_layers, source_job.is_combined)
+		source_job.outputs = self:create_final_outputs(
+			source,
+			settings,
+			source_job.input_layers,
+			source_job.is_combined,
+			source_job.metadata
+		)
 		generated_jobs[#generated_jobs + 1] = source_job
 	end
 	return generated_jobs
@@ -483,6 +506,7 @@ function TextureMapGenerator:regenerate_last()
 		AsepriteUIUtils.show_alert(self.config.title, settings_error)
 		return
 	end
+	assert(settings, "Settings provided for regeneration is nil.")
 
 	---@type LayerImagePair[][] # job_update_registry\[job_index\]\[layer_img_update_index\]
 	local job_update_registry = {}
@@ -497,8 +521,9 @@ function TextureMapGenerator:regenerate_last()
 			return
 		end
 
+		---@type GenerationJobOutput[]
 		local generated_outputs =
-			self.config.create_outputs(source, settings, job.input_layers, job.is_combined, job.metadata)
+			self:create_final_outputs(source, settings, job.input_layers, job.is_combined, job.metadata)
 
 		---@type table<string, GenerationJobOutput>
 		local generated_by_key = {}

@@ -7,10 +7,14 @@ function TextureMapUtils.valid_strength(value)
 	return value ~= nil and value == value and value ~= math.huge and value ~= -math.huge and value >= 0
 end
 
----@param count number The iteration count to validate
+---@param count number|nil The iteration count to validate
 ---@param maximum integer The maximum allowed iteration count
 ---@return boolean # true if the count is a valid iteration count within [1, maximum], false otherwise
 function TextureMapUtils.valid_iteration_count(count, maximum)
+	if type(count) ~= "number" then
+		return false
+	end
+
 	return count ~= nil
 		and count == count
 		and count ~= math.huge
@@ -32,14 +36,56 @@ function TextureMapUtils.valid_layer_shape(shape_name, layer_shapes)
 	return false
 end
 
----@param num_levels number The color value levels to validate
+---@param num_levels number|nil The color value levels to validate
 ---@param max_levels integer The maximum allowed color value levels
 ---@return boolean is_valid true if the color value level num is in 1..MAX_COLOR_VALUE_LEVELS_CAP, false otherwise
 function TextureMapUtils.valid_color_value_levels(num_levels, max_levels)
 	if type(num_levels) ~= "number" then
 		return false
 	end
-	return num_levels >= 1 and num_levels <= max_levels
+	return num_levels == math.floor(num_levels) and num_levels >= 1 and num_levels <= max_levels
+end
+
+---@param channel_value integer The channel value to quantize in the range [0, 255]
+---@param max_color_value_levels integer The maximum number of discrete output levels
+---@return integer quantized_value The nearest evenly spaced channel value
+local function quantize_color_channel(channel_value, max_color_value_levels)
+	if max_color_value_levels == 1 then
+		return 128
+	end
+
+	local interval_count = max_color_value_levels - 1
+	local nearest_level_index = math.floor((channel_value / 255) * interval_count + 0.5)
+	return MathUtils.round_to_u8((nearest_level_index / interval_count) * 255)
+end
+
+---Quantize each RGB channel to evenly spaced values while preserving alpha and the source image
+---@param source Image The image to quantize the RGB channels
+---@param max_color_value_levels integer The maximum number of discrete values allowed in each RGB channel
+---@return Image quantized_image A cloned image containing the quantized RGB values
+function TextureMapUtils.quantize_image(source, max_color_value_levels)
+	if not TextureMapUtils.valid_color_value_levels(max_color_value_levels, 256) then
+		error("Max Color Value Levels must be a whole number from 1 to 256.")
+	end
+
+	local quantized_image = source:clone()
+	local pixel_color = app.pixelColor
+	for y = 0, source.height - 1 do
+		for x = 0, source.width - 1 do
+			local source_pixel = source:getPixel(x, y)
+			quantized_image:drawPixel(
+				x,
+				y,
+				pixel_color.rgba(
+					quantize_color_channel(pixel_color.rgbaR(source_pixel), max_color_value_levels),
+					quantize_color_channel(pixel_color.rgbaG(source_pixel), max_color_value_levels),
+					quantize_color_channel(pixel_color.rgbaB(source_pixel), max_color_value_levels),
+					pixel_color.rgbaA(source_pixel)
+				)
+			)
+		end
+	end
+	return quantized_image
 end
 
 ---@param band number[] The texture band to sample from, represented as a 1D array of pixel values
