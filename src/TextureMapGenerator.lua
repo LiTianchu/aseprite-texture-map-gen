@@ -5,7 +5,11 @@ local AsepriteUIUtils = require("src.AsepriteUIUtils")
 --- Inherited by specific texture map generators like NormalMapGenerator and HeightMapGenerator
 ---@class TextureMapGenerator
 ---@field public config GeneratorConfig The configuration for the texture map generator
----@field public last_generation GenerationRecord The last generation jobs and their outputs, used for regeneration
+---@field public pref table The plugin preferences used by this generator instance
+---@field public sprite Sprite The sprite used by this generator instance
+---@field public layer_path_dict table<string, Layer> The image layers indexed by their unique paths
+---@field public dialog_box Dialog|nil The non-modal settings dialog, when one is open
+---@field public last_generation GenerationRecord|nil The last generation jobs and their outputs, used for regeneration
 ---@field public regenerate_available boolean Whether the Regenerate button is enabled in the dialog
 local TextureMapGenerator = {}
 TextureMapGenerator.__index = TextureMapGenerator
@@ -71,32 +75,43 @@ function TextureMapGenerator:save_layer_preferences(data)
 	write_preference(self, "separate_layers", data.separate_layers)
 end
 
----@param plugin Plugin
-function TextureMapGenerator:show_dialog(plugin)
-	local sprite = app.sprite
-	if not sprite then
+---@param plugin Plugin The Aseprite plugin instance
+---@return string[]|nil layer_paths The available image-layer paths, or nil when generation cannot start
+function TextureMapGenerator:initialize_generation_context(plugin)
+	---@type Sprite|nil
+	local active_sprite = app.sprite
+	if not active_sprite then
 		AsepriteUIUtils.show_alert(
 			self.config.title,
 			"Open a sprite before generating " .. self.config.indefinite_name .. "."
 		)
-		return
+		return nil
 	end
-	if sprite.colorMode ~= ColorMode.RGB then
+	if active_sprite.colorMode ~= ColorMode.RGB then
 		AsepriteUIUtils.show_alert(self.config.title, self.config.plural_name .. " require an RGB sprite.")
-		return
+		return nil
 	end
 
-	local layer_paths, layer_path_dict = AsepriteLayerUtils.layer_paths(sprite)
+	local layer_paths, layer_path_dict = AsepriteLayerUtils.layer_paths(active_sprite)
 	if #layer_paths == 0 then
 		AsepriteUIUtils.show_alert(self.config.title, "The sprite does not contain any image layers.")
-		return
+		return nil
 	end
 
 	self.pref = plugin.preferences
-	self.sprite = sprite
+	self.sprite = active_sprite
 	self.layer_path_dict = layer_path_dict
 	self.last_generation = nil
 	self.regenerate_available = false
+	return layer_paths
+end
+
+---@param plugin Plugin
+function TextureMapGenerator:show_dialog(plugin)
+	local layer_paths = self:initialize_generation_context(plugin)
+	if not layer_paths then
+		return
+	end
 
 	local selected_layers_are_input = read_preference(self, "selected_layers_are_input")
 	if selected_layers_are_input == nil then
@@ -110,7 +125,7 @@ function TextureMapGenerator:show_dialog(plugin)
 
 	local preferred_layer_path = read_preference(self, "input_layer")
 	local input_layer_path =
-		AsepriteLayerUtils.selected_layer_path(layer_paths, layer_path_dict, preferred_layer_path, app.layer)
+		AsepriteLayerUtils.selected_layer_path(layer_paths, self.layer_path_dict, preferred_layer_path, app.layer)
 	local initial_settings = self.config.parse_pref_settings(self.pref)
 
 	self.dialog_box = Dialog({
@@ -188,14 +203,39 @@ function TextureMapGenerator:show_dialog(plugin)
 	})
 end
 
----@param data GenerationSettings The data from the dialog box
+---Generate a new texture map immediately from the settings persisted in plugin preferences.
+---This uses an isolated generator instance so an open non-modal dialog keeps its own generation state.
+---@param plugin Plugin The Aseprite plugin instance
+---@return nil
+function TextureMapGenerator:generate_from_preferences(plugin)
+	---@type TextureMapGenerator
+	local quick_generator = TextureMapGenerator.new(self.config)
+	local layer_paths = quick_generator:initialize_generation_context(plugin)
+	if not layer_paths then
+		return
+	end
+
+	---@type GenerationSettings
+	local saved_settings = quick_generator.config.parse_pref_settings(quick_generator.pref)
+	---@type Layer[]
+	local input_layers = quick_generator:input_layers_from_settings(saved_settings)
+	quick_generator:generate_new(input_layers, saved_settings)
+end
+
+---@param settings GenerationSettings The settings that determine which layers are used as input
 ---@return Layer[] input_layers The ordered input layers to generate from
-function TextureMapGenerator:input_layers_from_dialog(data)
-	if data.selected_layers_are_input then
+function TextureMapGenerator:input_layers_from_settings(settings)
+	if settings.selected_layers_are_input then
 		return AsepriteLayerUtils.selected_layers(app.range, app.layer)
 	end
 
-	local single_input_layer = self.layer_path_dict[data.input_layer]
+	local input_layer_path = settings.input_layer
+	if not input_layer_path then
+		return {}
+	end
+
+	---@type Layer|nil
+	local single_input_layer = self.layer_path_dict[input_layer_path]
 	return single_input_layer and { single_input_layer } or {}
 end
 
@@ -267,10 +307,17 @@ function TextureMapGenerator:generate_from_dialog()
 	end
 
 	---@type Layer[]
-	local layers = self:input_layers_from_dialog(data)
+	local input_layers = self:input_layers_from_settings(settings)
+	self:generate_new(input_layers, settings)
+end
 
+---Generate new texture-map layers from explicit input layers and sanitized settings.
+---@param input_layers Layer[] The input layers selected for generation
+---@param settings GenerationSettings The sanitized settings to use for generation
+---@return nil
+function TextureMapGenerator:generate_new(input_layers, settings)
 	---@type Layer[]
-	local ordered_layers = AsepriteLayerUtils.ordered_image_layers(self.sprite, layers)
+	local ordered_layers = AsepriteLayerUtils.ordered_image_layers(self.sprite, input_layers)
 
 	if #ordered_layers == 0 then
 		AsepriteUIUtils.show_alert(self.config.title, "Select at least one image layer to use as input.")
@@ -353,7 +400,7 @@ function TextureMapGenerator:generate_from_dialog()
 		end
 	end)
 
-	self:save_layer_preferences(data)
+	self:save_layer_preferences(settings)
 	self.config.save_settings(self.pref, settings)
 	self.last_generation = {
 		sprite = self.sprite,

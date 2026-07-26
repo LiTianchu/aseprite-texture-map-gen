@@ -32,9 +32,12 @@ chmod +x ./build.sh && ./build.sh
 
 ## Using the Extension
 
+Each texture-map submenu provides a dialog command and a `Quick Generate` command. Quick generation skips the
+dialog and uses the layer and map settings saved in the plugin preferences.
+
 ### Normal Map Generation
 
-**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Generate Normal Map`  
+**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Normal Map` > `Generate Normal Map (Dialog)`
 
 #### Dialog
 
@@ -56,7 +59,7 @@ chmod +x ./build.sh && ./build.sh
 
 ### Height Map Generation
 
-**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Generate Height Map`  
+**Menu Location**: `Edit` > `FX` > `Texture Map Generator` > `Height Map` > `Generate Height Map (Dialog)`
 
 #### Dialog
 
