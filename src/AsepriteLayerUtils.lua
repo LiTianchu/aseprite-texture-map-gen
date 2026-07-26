@@ -72,35 +72,35 @@ end
 ---@private
 ---@param layers Layer[] The aseprite layers to process
 ---@param prefix string The aseprite layer path prefix, e.g. "Group / Subgroup / "
----@param options string[] Capturer, the list of aseprite layer path options to append to
----@param option_layers table<string, Layer> Capturer, a mapping of Aseprite layer path options to their corresponding Aseprite layer
-local function append_layer_options(layers, prefix, options, option_layers)
+---@param layer_paths string[] Accumulator for the unique image-layer paths
+---@param layer_path_dict table<string, Layer> Accumulator mapping unique layer paths to their image layers
+local function append_layer_paths(layers, prefix, layer_paths, layer_path_dict)
 	for _, layer in ipairs(layers) do
 		local path = prefix .. layer.name
 		if layer.isGroup then
-			append_layer_options(layer.layers, path .. " / ", options, option_layers)
+			append_layer_paths(layer.layers, path .. " / ", layer_paths, layer_path_dict)
 		elseif is_image_layer(layer) then
-			local option = path
+			local layer_path = path
 			local suffix = 2
-			while option_layers[option] do
-				option = path .. " (" .. suffix .. ")"
+			while layer_path_dict[layer_path] do
+				layer_path = path .. " (" .. suffix .. ")"
 				suffix = suffix + 1
 			end
 
-			options[#options + 1] = option
-			option_layers[option] = layer
+			layer_paths[#layer_paths + 1] = layer_path
+			layer_path_dict[layer_path] = layer
 		end
 	end
 end
 
----@param sprite Sprite The Aseprite sprite document to extract the layer options from
----@return string[] options # The list of aseprite layer path options, e.g. "Group, Subgroup, Layer"
----@return table<string, Layer> option_layers # A mapping of Aseprite layer path options to their corresponding Aseprite layer
-function AsepriteLayerUtils.layer_options(sprite)
-	local options = {}
-	local option_layers = {}
-	append_layer_options(sprite.layers, "", options, option_layers)
-	return options, option_layers
+---@param sprite Sprite The Aseprite sprite document from which to extract image-layer paths
+---@return string[] layer_paths # The unique image-layer paths, e.g. "Group / Subgroup / Layer"
+---@return table<string, Layer> layer_path_dict # A mapping of unique layer paths to their corresponding image layers
+function AsepriteLayerUtils.layer_paths(sprite)
+	local layer_paths = {}
+	local layer_path_dict = {}
+	append_layer_paths(sprite.layers, "", layer_paths, layer_path_dict)
+	return layer_paths, layer_path_dict
 end
 
 ---Composite the layers frame_number N onto a new image using the dimension of a reference sprite
@@ -130,25 +130,25 @@ function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
 	return source, true
 end
 
----@param options string[] The list of Aseprite layer path options, e.g. "Group, Subgroup, Layer"
----@param option_layers table<string, Layer> A mapping of Aseprite layer path options to their corresponding Aseprite layer
----@param preferred_option string|nil The preferred option to select if it exists in the option layers
----@param active_layer Layer|nil The Aseprite layer corresponding to the active layer in the timeline, used to select the option corresponding to the active layer if the preferred option does not exist
----@return string option # The preferred option if it exists in the option layers, otherwise the option corresponds to the active layer, otherwise the first option in the list
-function AsepriteLayerUtils.selected_option(options, option_layers, preferred_option, active_layer)
-	if preferred_option and option_layers[preferred_option] then
-		return preferred_option
+---@param layer_paths string[] The unique image-layer paths, e.g. "Group / Subgroup / Layer"
+---@param layer_path_dict table<string, Layer> A mapping of unique layer paths to their corresponding image layers
+---@param preferred_layer_path string|nil The preferred layer path, if it still identifies an image layer
+---@param active_layer Layer|nil The active timeline layer, used when the preferred path is unavailable
+---@return string layer_path # The preferred path, the active layer's path, or the first available path
+function AsepriteLayerUtils.selected_layer_path(layer_paths, layer_path_dict, preferred_layer_path, active_layer)
+	if preferred_layer_path and layer_path_dict[preferred_layer_path] then
+		return preferred_layer_path
 	end
 
 	if active_layer then
-		for _, option in ipairs(options) do
-			if option_layers[option] == active_layer then
-				return option
+		for _, layer_path in ipairs(layer_paths) do
+			if layer_path_dict[layer_path] == active_layer then
+				return layer_path
 			end
 		end
 	end
 
-	return options[1]
+	return layer_paths[1]
 end
 
 --- Extracts the selected layers from the Aseprite range object

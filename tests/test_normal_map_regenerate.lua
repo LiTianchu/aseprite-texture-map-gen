@@ -76,7 +76,7 @@ end
 
 NormalMapGenerator.pref = {}
 NormalMapGenerator.sprite = sprite
-NormalMapGenerator.option_layers = {
+NormalMapGenerator.layer_path_dict = {
 	Bottom = bottom_input,
 	Top = top_input,
 }

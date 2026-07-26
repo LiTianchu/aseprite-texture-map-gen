@@ -78,7 +78,7 @@ end
 
 HeightMapGenerator.pref = {}
 HeightMapGenerator.sprite = sprite
-HeightMapGenerator.option_layers = {
+HeightMapGenerator.layer_path_dict = {
 	Bottom = bottom_input,
 	Top = top_input,
 }

@@ -1,8 +1,8 @@
 local TextureMapGenerator = require("src.TextureMapGenerator")
 local TextureMapUtils = require("src.TextureMapUtils")
 
-local DEFAULT_EDGE_STRENGTH = 1.0
-local DEFAULT_ITERATION_COUNT = 64
+local DEFAULT_EDGE_STRENGTH = 32.0
+local DEFAULT_ITERATION_COUNT = 128
 local MAX_ITERATION_COUNT = 512
 local DEFAULT_INPUT_TYPE = "Color"
 local INPUT_TYPES = { "Color", "Normal Map" }

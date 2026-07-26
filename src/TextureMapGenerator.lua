@@ -86,15 +86,15 @@ function TextureMapGenerator:show_dialog(plugin)
 		return
 	end
 
-	local options, option_layers = AsepriteLayerUtils.layer_options(sprite)
-	if #options == 0 then
+	local layer_paths, layer_path_dict = AsepriteLayerUtils.layer_paths(sprite)
+	if #layer_paths == 0 then
 		AsepriteUIUtils.show_alert(self.config.title, "The sprite does not contain any image layers.")
 		return
 	end
 
 	self.pref = plugin.preferences
 	self.sprite = sprite
-	self.option_layers = option_layers
+	self.layer_path_dict = layer_path_dict
 	self.last_generation = nil
 	self.regenerate_available = false
 
@@ -108,8 +108,9 @@ function TextureMapGenerator:show_dialog(plugin)
 		separate_layers = true
 	end
 
-	local preferred_input = read_preference(self, "input_layer")
-	local input_option = AsepriteLayerUtils.selected_option(options, option_layers, preferred_input, app.layer)
+	local preferred_layer_path = read_preference(self, "input_layer")
+	local input_layer_path =
+		AsepriteLayerUtils.selected_layer_path(layer_paths, layer_path_dict, preferred_layer_path, app.layer)
 	local initial_settings = self.config.parse_pref_settings(self.pref)
 
 	self.dialog_box = Dialog({
@@ -154,8 +155,8 @@ function TextureMapGenerator:show_dialog(plugin)
 		:combobox({
 			id = "input_layer",
 			label = "Input Layer (Single Layer)",
-			options = options,
-			option = input_option,
+			options = layer_paths,
+			option = input_layer_path,
 			enabled = not selected_layers_are_input,
 			onchange = function()
 				self:invalidate_regeneration()
@@ -194,7 +195,7 @@ function TextureMapGenerator:input_layers_from_dialog(data)
 		return AsepriteLayerUtils.selected_layers(app.range, app.layer)
 	end
 
-	local single_input_layer = self.option_layers[data.input_layer]
+	local single_input_layer = self.layer_path_dict[data.input_layer]
 	return single_input_layer and { single_input_layer } or {}
 end
 
