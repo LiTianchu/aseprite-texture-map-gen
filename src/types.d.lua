@@ -1,3 +1,5 @@
+---@meta
+
 ---@class GenerationSettings
 ---@field public selected_layers_are_input boolean Whether the selected layers are used as input for generation
 ---@field public separate_layers boolean Whether to generate outputs for each input layer separately
