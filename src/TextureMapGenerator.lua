@@ -307,6 +307,7 @@ function TextureMapGenerator:generate_from_dialog()
 	end
 
 	---@type Layer[]
+	assert(settings, "Settings provided for generation is nil.")
 	local input_layers = self:input_layers_from_settings(settings)
 	self:generate_new(input_layers, settings)
 end

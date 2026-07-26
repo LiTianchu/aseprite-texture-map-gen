@@ -9,6 +9,7 @@ assert(app and app.pixelColor, "Run this test with Aseprite")
 ---@param values integer[] The grayscale values to write from left to right, top to bottom
 ---@return Image image The resulting RGB image
 local function grayscale_image(values)
+	---@diagnostic disable-next-line: param-type-mismatch
 	local image = Image(3, 3, ColorMode.RGB)
 	for index, value in ipairs(values) do
 		local x = (index - 1) % 3
@@ -41,6 +42,7 @@ local source_image = grayscale_image({
 	128,
 	255,
 })
+---@diagnostic disable-next-line: param-type-mismatch
 local sprite = Sprite(3, 3, ColorMode.RGB)
 local input_layer = sprite:newLayer()
 input_layer.name = "Input"
@@ -76,6 +78,7 @@ Dialog = function()
 	error("Quick generation must not construct a dialog")
 end
 
+---@diagnostic disable-next-line: param-type-mismatch
 NormalMapGenerator:generate_from_preferences(plugin)
 
 local normal_output_layer = find_layer_by_name(sprite, "Input_normal")
@@ -88,6 +91,8 @@ assert(
 assert(app.layer == normal_output_layer, "Quick normal-map generation should activate its output")
 
 app.layer = input_layer
+
+---@diagnostic disable-next-line: param-type-mismatch
 HeightMapGenerator:generate_from_preferences(plugin)
 
 local height_output_layer = find_layer_by_name(sprite, "Input_height")

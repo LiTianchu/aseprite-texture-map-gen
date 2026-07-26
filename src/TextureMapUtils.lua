@@ -121,6 +121,8 @@ end
 ---@return Image normal_map The generated normal map image.
 function TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
 	local luminance_map, alpha_map = image_to_luminance_texture(source)
+
+	---@diagnostic disable-next-line: param-type-mismatch
 	local normal_map = Image(source.width, source.height, ColorMode.RGB)
 	local pixel_color = app.pixelColor
 	local direction = layer_shape == "Concave" and 1 or -1
@@ -347,6 +349,7 @@ function TextureMapUtils.create_height_image(source, edge_strength, iteration_co
 		iteration_count,
 		surface_mask
 	)
+	---@diagnostic disable-next-line: param-type-mismatch
 	local height_map = Image(source.width, source.height, ColorMode.RGB)
 	local pixel_color = app.pixelColor
 

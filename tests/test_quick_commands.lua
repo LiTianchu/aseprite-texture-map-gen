@@ -73,6 +73,7 @@ function plugin:newCommand(command)
 	registered_command_count = registered_command_count + 1
 end
 
+---@diagnostic disable-next-line: param-type-mismatch
 init(plugin)
 
 local texture_map_menu = registered_menu_groups.texture_gen_menu

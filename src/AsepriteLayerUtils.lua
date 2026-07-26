@@ -111,6 +111,7 @@ end
 ---@return boolean cell_valid_for_all_layers # true if all layers have a cel at the frame_number, false otherwise
 ---@return Layer|nil missing_layer # The first layer that does not have a cel at the frame_number, or nil if all layers have a cel
 function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
+	---@diagnostic disable-next-line: param-type-mismatch
 	local source = Image(ref_sprite.width, ref_sprite.height, ColorMode.RGB)
 	for _, layer in ipairs(layers) do
 		local cel = layer:cel(frame_number)
@@ -193,7 +194,9 @@ function AsepriteLayerUtils.create_layer_for_inputs(sprite, input_layers, name, 
 		return AsepriteLayerUtils.create_layer_above(sprite, first_input, name, image, frame_number)
 	end
 
+	---@type Layer|Sprite|nil
 	local common_parent = first_input.parent
+
 	local anchor_layer = first_input
 
 	-- find the last layer in the input layers that shares the same parent
