@@ -234,7 +234,7 @@ function TextureMapGenerator:generate_from_dialog()
 	end
 
 	local data = self.dialog_box.data
-	local settings, settings_error = self.config.read_dialog_settings(data)
+	local settings, settings_error = self.config.sanitize_dialog_settings(data)
 	if settings_error then
 		self:show_alert(settings_error)
 		return
@@ -371,7 +371,7 @@ function TextureMapGenerator:regenerate_last()
 		return
 	end
 
-	local settings, settings_error = self.config.read_dialog_settings(self.dialog_box.data)
+	local settings, settings_error = self.config.sanitize_dialog_settings(self.dialog_box.data)
 	if settings_error then
 		self:show_alert(settings_error)
 		return

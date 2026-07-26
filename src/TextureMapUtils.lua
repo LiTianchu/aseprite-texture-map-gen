@@ -1,18 +1,5 @@
 local TextureMapUtils = {}
-
----@param value number The value to clamp
----@param minimum number The minimum allowed value
----@param maximum number The maximum allowed value
----@return number # The clamped value within [minimum, maximum]
-local function clamp(value, minimum, maximum)
-	return math.max(minimum, math.min(maximum, value))
-end
-
----@param value number The value to round and clamp
----@return integer # The value rounded to the nearest integer and clamped to [0, 255]
-local function round_to_u8(value)
-	return math.floor(clamp(value, 0, 255) + 0.5) -- +0.5 to turn floor into round
-end
+local MathUtils = require("src.MathUtils")
 
 ---@param value number The edge strength value to validate
 ---@return boolean # true if the value is a valid edge strength (non-negative finite number),
@@ -52,8 +39,8 @@ end
 ---@param y integer The y-coordinate of the pixel to sample
 ---@return number value sampled pixel value, clamped to the texture bounds
 local function sample_band(band, width, height, x, y)
-	x = clamp(x, 0, width - 1)
-	y = clamp(y, 0, height - 1)
+	x = MathUtils.clamp(x, 0, width - 1)
+	y = MathUtils.clamp(y, 0, height - 1)
 	return band[y * width + x + 1]
 end
 
@@ -118,7 +105,7 @@ local function image_to_luminance_texture(image)
 			local alpha = pixel_color.rgbaA(pixel)
 			local index = y * image.width + x + 1
 
-			-- Rec. 709 luminance luminance calculation formula
+			-- Rec. 709 luminance calculation formula
 			luminance_map[index] = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255 * alpha / 255
 			alpha_map[index] = alpha
 		end
@@ -153,9 +140,9 @@ function TextureMapUtils.create_normal_image(source, edge_strength, layer_shape)
 				x,
 				y,
 				pixel_color.rgba(
-					round_to_u8((normal_x * 0.5 + 0.5) * 255),
-					round_to_u8((normal_y * 0.5 + 0.5) * 255),
-					round_to_u8((normal_z * 0.5 + 0.5) * 255),
+					MathUtils.round_to_u8((normal_x * 0.5 + 0.5) * 255),
+					MathUtils.round_to_u8((normal_y * 0.5 + 0.5) * 255),
+					MathUtils.round_to_u8((normal_z * 0.5 + 0.5) * 255),
 					alpha_map[index]
 				)
 			)
@@ -319,9 +306,9 @@ local function image_to_slope_texture(image, edge_strength)
 			local index = y * image.width + x + 1
 
 			-- remap normal values from [0, 255] to [-1, 1] range
-			local normal_x = clamp((red - 128) / 127, -1, 1)
-			local normal_y = clamp((green - 128) / 127, -1, 1)
-			local normal_z = clamp((blue - 128) / 127, -1, 1)
+			local normal_x = MathUtils.clamp((red - 128) / 127, -1, 1)
+			local normal_y = MathUtils.clamp((green - 128) / 127, -1, 1)
+			local normal_z = MathUtils.clamp((blue - 128) / 127, -1, 1)
 
 			alpha_map[index] = alpha
 			surface_mask[index] = alpha > 0
@@ -366,7 +353,7 @@ function TextureMapUtils.create_height_image(source, edge_strength, iteration_co
 	for y = 0, source.height - 1 do
 		for x = 0, source.width - 1 do
 			local index = y * source.width + x + 1
-			local height_byte = round_to_u8(heights[index] * 255)
+			local height_byte = MathUtils.round_to_u8(heights[index] * 255)
 			height_map:drawPixel(x, y, pixel_color.rgba(height_byte, height_byte, height_byte, alpha_map[index]))
 		end
 	end

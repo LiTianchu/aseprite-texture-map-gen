@@ -1,7 +1,7 @@
 local HeightMapGenerator = require("src.HeightMapGenerator")
 local NormalMapGenerator = require("src.NormalMapGenerator")
 
----@param plugin Plugin
+---@param plugin Plugin The Aseprite plugin instance
 function init(plugin)
 	plugin:newMenuGroup({
 		id = "texture_gen_menu",

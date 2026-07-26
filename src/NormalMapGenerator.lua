@@ -5,10 +5,8 @@ local DEFAULT_EDGE_STRENGTH = 1.0
 local DEFAULT_LAYER_SHAPE = "Convex"
 local LAYER_SHAPES = { "Convex", "Concave" }
 
-local function valid_layer_shape(layer_shape)
-	return TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES)
-end
-
+---@param pref table The preferences table containing saved settings from Aseprite Plugin
+---@return NormalMapGeneratorSettings settings initial settings for the normal map generator
 local function initial_settings(pref)
 	local edge_strength = tonumber(pref.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
@@ -16,7 +14,7 @@ local function initial_settings(pref)
 	end
 
 	local layer_shape = pref.layer_shape
-	if not valid_layer_shape(layer_shape) then
+	if not TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES) then
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
@@ -26,14 +24,17 @@ local function initial_settings(pref)
 	}
 end
 
-local function read_dialog_settings(data)
-	local edge_strength = tonumber(data.edge_strength)
+---@param data NormalMapGeneratorSettings The data table containing settings to be validated
+---@return NormalMapGeneratorSettings|nil settings The validated settings for the normal map generator, or nil if invalid
+---@return string|nil error_message An error message if the settings are invalid, or nil if valid
+local function sanitize_dialog_settings(data)
+	local edge_strength = tonumber(data.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		return nil, "Edge Intensity must be zero or a positive number."
 	end
 
 	local layer_shape = data.layer_shape
-	if not valid_layer_shape(layer_shape) then
+	if not TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES) then
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
@@ -55,7 +56,7 @@ local NormalMapGenerator = TextureMapGenerator.new({
 	generate_button_id = "generate_normal_map",
 	regenerate_button_id = "regenerate_normal_map",
 	initial_settings = initial_settings,
-	read_dialog_settings = read_dialog_settings,
+	sanitize_dialog_settings = sanitize_dialog_settings,
 	add_settings_widgets = function(_, dialog_box, settings)
 		dialog_box
 			:separator({ id = "normal_ground_truth_assumptions", text = "Ground Truth Assumptions" })

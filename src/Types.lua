@@ -5,6 +5,10 @@
 ---@field public layer_shape string The assumed shape of the object in the input layers ("Convex " or "Concave")
 ---@field public dump_intermediate_normal_map boolean Whether to keep the intermediate normal map output
 
+---@class NormalMapGeneratorSettings
+---@field public layer_shape string The assumed shape of the object in the input layers ("Convex" or "Concave")
+---@field public edge_strength number The strength of the edge detection for normal map generation
+
 ---@class GenerationJobOutput
 ---@field public key string The stable key used to match this output when regenerating
 ---@field public layer Layer The Aseprite layer containing the generated output

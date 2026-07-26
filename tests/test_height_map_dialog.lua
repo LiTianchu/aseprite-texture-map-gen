@@ -98,10 +98,7 @@ HeightMapGenerator:show_dialog({
 })
 
 assert(dialog, "The height-map dialog should be created")
-assert(
-	dialog.widgets_by_id.height_input_type.option == "Color",
-	"Normal Map should be the default input interpretation"
-)
+assert(dialog.widgets_by_id.input_type.option == "Color", "Normal Map should be the default input interpretation")
 assert(
 	dialog.widgets_by_id.dump_intermediate_normal_map.enabled == true,
 	"Keeping an intermediate normal should start enabled for color input"
@@ -122,8 +119,8 @@ HeightMapGenerator.last_generation = {
 	jobs = { {} },
 }
 HeightMapGenerator.regenerate_available = true
-dialog.data.height_input_type = "Color"
-dialog.widgets_by_id.height_input_type.onchange()
+dialog.data.input_type = "Color"
+dialog.widgets_by_id.input_type.onchange()
 
 assert(
 	dialog.modifications.dump_intermediate_normal_map.enabled,

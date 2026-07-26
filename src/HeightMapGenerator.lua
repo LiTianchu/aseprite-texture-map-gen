@@ -9,8 +9,16 @@ local INPUT_TYPES = { "Color", "Normal Map" }
 local DEFAULT_LAYER_SHAPE = "Convex"
 local LAYER_SHAPES = { "Convex", "Concave" }
 
-local function valid_option(value, options)
-	return TextureMapUtils.valid_layer_shape(value, options)
+---@param value string The input type to validate
+---@param options string[] The list of valid input types
+---@return boolean is_valid True if the input type is valid, false otherwise
+local function valid_input_type(value, options)
+	for _, input_type in ipairs(options) do
+		if value == input_type then
+			return true
+		end
+	end
+	return false
 end
 
 ---@param pref table The preferences table containing saved settings from Aseprite Plugin
@@ -26,13 +34,13 @@ local function initial_settings(pref)
 		iteration_count = DEFAULT_ITERATION_COUNT
 	end
 
-	local input_type = pref.height_input_type
-	if not valid_option(input_type, INPUT_TYPES) then
+	local input_type = pref.input_type
+	if not valid_input_type(input_type, INPUT_TYPES) then
 		input_type = DEFAULT_INPUT_TYPE
 	end
 
 	local layer_shape = pref.height_layer_shape
-	if not valid_option(layer_shape, LAYER_SHAPES) then
+	if not TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES) then
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
@@ -52,7 +60,10 @@ local function initial_settings(pref)
 	return settings
 end
 
-local function read_dialog_settings(data)
+---@param data HeightMapGeneratorSettings The data table containing settings to be validated
+---@return HeightMapGeneratorSettings|nil settings The validated settings for the height map generator, or nil if invalid
+---@return string|nil error_message An error message if the settings are invalid,
+local function sanitize_dialog_settings(data)
 	local edge_strength = tonumber(data.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
 		return nil, "Edge Intensity must be zero or a positive number."
@@ -63,23 +74,26 @@ local function read_dialog_settings(data)
 		return nil, "Slope Iterations must be a whole number from 1 to " .. MAX_ITERATION_COUNT .. "."
 	end
 
-	local input_type = data.height_input_type
-	if not valid_option(input_type, INPUT_TYPES) then
+	local input_type = data.input_type
+	if not valid_input_type(input_type, INPUT_TYPES) then
 		input_type = DEFAULT_INPUT_TYPE
 	end
 
 	local layer_shape = data.layer_shape
-	if not valid_option(layer_shape, LAYER_SHAPES) then
+	if not TextureMapUtils.valid_layer_shape(layer_shape, LAYER_SHAPES) then
 		layer_shape = DEFAULT_LAYER_SHAPE
 	end
 
-	return {
+	---@type HeightMapGeneratorSettings
+	local sanized_dialog_settings = {
 		edge_strength = edge_strength,
 		iteration_count = iteration_count,
 		input_type = input_type,
 		layer_shape = layer_shape,
 		dump_intermediate_normal_map = input_type == "Color" and data.dump_intermediate_normal_map == true,
 	}
+
+	return sanized_dialog_settings
 end
 
 ---@class HeightMapGenerator : TextureMapGenerator
@@ -99,12 +113,12 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		separate_layers = "height_separate_layers",
 	},
 	initial_settings = initial_settings,
-	read_dialog_settings = read_dialog_settings,
+	sanitize_dialog_settings = sanitize_dialog_settings,
 	add_settings_widgets = function(generator, dialog_box, settings)
 		local color_input = settings.input_type == "Color"
 
 		local function update_input_type_controls()
-			local is_color = dialog_box.data.height_input_type == "Color"
+			local is_color = dialog_box.data.input_type == "Color"
 			dialog_box:modify({
 				id = "layer_shape",
 				enabled = is_color,
@@ -118,7 +132,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		dialog_box
 			:separator({ id = "height_input_interpretation", text = "Input Format" })
 			:combobox({
-				id = "height_input_type",
+				id = "input_type",
 				label = "Treat Layers As",
 				options = INPUT_TYPES,
 				option = settings.input_type,
@@ -161,21 +175,21 @@ local HeightMapGenerator = TextureMapGenerator.new({
 			:newrow()
 			:number({
 				id = "iteration_count",
-				label = "Iterations (1-" .. MAX_ITERATION_COUNT .. ")",
+				label = "Max Iterations (1-" .. MAX_ITERATION_COUNT .. ")",
 				text = tostring(settings.iteration_count),
 				decimals = 0,
 				hexpand = true,
 			})
 	end,
 	save_dialog_preferences = function(pref, data)
-		pref.height_input_type = data.height_input_type
+		pref.input_type = data.input_type
 		pref.height_dump_intermediate_normal_map = data.dump_intermediate_normal_map
 		pref.height_layer_shape = data.layer_shape
 		pref.height_edge_strength = data.edge_strength
 		pref.height_iteration_count = data.iteration_count
 	end,
 	save_settings = function(pref, settings)
-		pref.height_input_type = settings.input_type
+		pref.input_type = settings.input_type
 		pref.height_dump_intermediate_normal_map = settings.dump_intermediate_normal_map
 		pref.height_layer_shape = settings.layer_shape
 		pref.height_edge_strength = settings.edge_strength
