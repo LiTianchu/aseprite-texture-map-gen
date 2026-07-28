@@ -5,6 +5,7 @@
 ---@field public selected_layers_are_input boolean Whether the selected layers are used as input for generation
 ---@field public separate_layers boolean Whether to generate outputs for each input layer separately
 ---@field public input_layer string|nil The path of the input layer to use for generation when not using selected layers as input
+---@field public generate_all_frames boolean Whether to generate outputs for all frames in the sprite
 
 ---Sanitized settings shared by every texture map generator
 ---@class GenerationSettings : LayerSelectionData
@@ -65,7 +66,7 @@
 ---@field parse_pref_settings fun(pref: table): GenerationSettings
 ---@field sanitize_dialog_settings fun(data: HeightMapDialogData|NormalMapDialogData): settings: GenerationSettings|nil, error_message: string|nil
 ---@field add_settings_widgets fun(generator: TextureMapGenerator, dialog_box: Dialog, settings: GenerationSettings)
----@field save_dialog_preferences fun(pref: table, data: HeightMapDialogData|NormalMapDialogData)
+---@field save_specific_preferences fun(pref: table, data: HeightMapDialogData|NormalMapDialogData)
 ---@field save_settings fun(pref: table, settings: GenerationSettings|nil)
 ---@field job_metadata? fun(settings: table): table|nil
 ---@field create_outputs fun(source: Image, settings: GenerationSettings|nil, input_layers: Layer[], is_combined: boolean, metadata?: table): GenerationJobOutput[]

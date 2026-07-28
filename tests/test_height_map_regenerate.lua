@@ -65,6 +65,7 @@ local dialog = {
 		selected_layers_are_input = true,
 		separate_layers = true,
 		input_layer = "Bottom",
+		generate_all_frames = false,
 		input_type = "Normal Map",
 		dump_intermediate_normal_map = false,
 		layer_shape = "Convex",

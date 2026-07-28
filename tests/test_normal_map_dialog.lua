@@ -107,16 +107,9 @@ for index, entry in ipairs(dialog.widgets) do
 end
 
 assert(first_check_index, "The selected-layers checkbox should exist")
-assert(
-	dialog.widgets[first_check_index + 1].type == "newrow",
-	"The two normal-map checkboxes should be separated by a forced row"
-)
-assert(
-	dialog.widgets[first_check_index + 2].type == "check"
-		and dialog.widgets[first_check_index + 2].widget.id == "separate_layers",
-	"The separate-layers checkbox should start on the next row"
-)
 assert(dialog.widgets_by_id.separate_layers.enabled, "Separate generation should start enabled in multi-layer mode")
+
+assert(dialog.widgets_by_id.generate_all_frames.selected ~= true, "Generate all frames should be not selectd on start.")
 assert(
 	type(dialog.widgets_by_id.input_layer.onchange) == "function",
 	"The input combobox should use Aseprite's onchange callback"

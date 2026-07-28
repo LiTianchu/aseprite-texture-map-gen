@@ -54,6 +54,7 @@ local preferences = {
 	selected_layers_are_input = false,
 	separate_layers = true,
 	input_layer = "Input",
+	generate_all_frames = false,
 	edge_strength = 2,
 	layer_shape = "Concave",
 	normal_max_color_value_levels = 4,

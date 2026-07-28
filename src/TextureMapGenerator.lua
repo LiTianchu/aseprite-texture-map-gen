@@ -74,6 +74,7 @@ function TextureMapGenerator:save_layer_preferences(data)
 	write_preference(self, "input_layer", data.input_layer)
 	write_preference(self, "selected_layers_are_input", data.selected_layers_are_input)
 	write_preference(self, "separate_layers", data.separate_layers)
+	write_preference(self, "generate_all_frames", data.generate_all_frames)
 end
 
 ---@param plugin Plugin The Aseprite plugin instance
@@ -124,6 +125,11 @@ function TextureMapGenerator:show_dialog(plugin)
 		separate_layers = true
 	end
 
+	local generate_all_frames = read_preference(self, "generate_all_frames")
+	if generate_all_frames == nil then
+		generate_all_frames = false
+	end
+
 	local preferred_layer_path = read_preference(self, "input_layer")
 	local input_layer_path =
 		AsepriteLayerUtils.selected_layer_path(layer_paths, self.layer_path_dict, preferred_layer_path, app.layer)
@@ -134,7 +140,7 @@ function TextureMapGenerator:show_dialog(plugin)
 		onclose = function()
 			local data = self.dialog_box.data
 			self:save_layer_preferences(data)
-			self.config.save_dialog_preferences(self.pref, data)
+			self.config.save_specific_preferences(self.pref, data)
 			self.last_generation = nil
 			self.regenerate_available = false
 		end,
@@ -159,6 +165,17 @@ function TextureMapGenerator:show_dialog(plugin)
 			end,
 		})
 		:newrow()
+		:combobox({
+			id = "input_layer",
+			label = "Input Layer (Single Layer)",
+			options = layer_paths,
+			option = input_layer_path,
+			enabled = not selected_layers_are_input,
+			onchange = function()
+				self:invalidate_regeneration()
+			end,
+		})
+		:newrow()
 		:check({
 			id = "separate_layers",
 			text = "Separate Generated Layers",
@@ -168,13 +185,12 @@ function TextureMapGenerator:show_dialog(plugin)
 				self:invalidate_regeneration()
 			end,
 		})
-		:combobox({
-			id = "input_layer",
-			label = "Input Layer (Single Layer)",
-			options = layer_paths,
-			option = input_layer_path,
-			enabled = not selected_layers_are_input,
-			onchange = function()
+		:newrow()
+		:check({
+			id = "generate_all_frames",
+			text = "Generate All Frames",
+			selected = generate_all_frames,
+			onclick = function()
 				self:invalidate_regeneration()
 			end,
 		})
@@ -241,7 +257,7 @@ function TextureMapGenerator:input_layers_from_settings(settings)
 end
 
 ---Create generated outputs and apply quantization
----@param source Image The rendered source image for the generation job
+---@param source Image The rendered reference source image for the generation job
 ---@param settings GenerationSettings The sanitized generator settings
 ---@param input_layers Layer[] The input layers used by the generation job
 ---@param is_combined boolean Whether the inputs were combined into one source
@@ -251,8 +267,7 @@ function TextureMapGenerator:create_final_outputs(source, settings, input_layers
 	---@cast settings SurfaceMapGenerationSettings
 	local generated_outputs = self.config.create_outputs(source, settings, input_layers, is_combined, metadata)
 	for _, output in ipairs(generated_outputs) do
-		output.content.image =
-			TextureMapUtils.quantize_image(output.content.image, settings.max_color_value_levels)
+		output.content.image = TextureMapUtils.quantize_image(output.content.image, settings.max_color_value_levels)
 	end
 	return generated_outputs
 end
@@ -260,14 +275,16 @@ end
 ---@param ordered_layers Layer[] The ordered input layers to generate from
 ---@param frame_number integer The frame number selected from the ordered_layers input
 ---@param settings GenerationSettings|nil The settings for the generation
----@return GenerationJob[]|nil generated_jobs The generated jobs with their outputs, or nil if an error occurred
+---@return GenerationJob[] generated_jobs The generated jobs with their outputs
 function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number, settings)
 	if not settings then
 		settings = self.config.parse_pref_settings({})
 	end
+
 	---@type GenerationJob[]
 	local source_jobs = {}
 	if settings.selected_layers_are_input and not settings.separate_layers and #ordered_layers > 1 then
+		-- if don't want to separate layers, put every layer into a single job
 		source_jobs[1] = {
 			input_layers = ordered_layers,
 			is_combined = true,
@@ -275,7 +292,7 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 	else
 		for _, input_layer in ipairs(ordered_layers) do
 			source_jobs[#source_jobs + 1] = {
-				input_layers = { input_layer },
+				input_layers = { input_layer }, -- put a single layer into each job
 				is_combined = false,
 			}
 		end
@@ -283,17 +300,16 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 
 	local generated_jobs = {}
 	for _, source_job in ipairs(source_jobs) do
-		local source, has_cel, missing_layer =
-			AsepriteLayerUtils.render_layers(self.sprite, source_job.input_layers, frame_number)
-		if not has_cel then
-			AsepriteUIUtils.show_alert(
-				self.config.title,
-				"Layer '"
-					.. (missing_layer ~= nil and missing_layer.name or "Unknown Layer")
-					.. "' does not contain an image in the active frame."
-			)
-			return nil
-		end
+		local source, _, _ = AsepriteLayerUtils.render_layers(self.sprite, source_job.input_layers, frame_number)
+		-- if not has_cel then
+		-- 	AsepriteUIUtils.show_alert(
+		-- 		self.config.title,
+		-- 		"Layer '"
+		-- 			.. (missing_layer ~= nil and missing_layer.name or "Unknown Layer")
+		-- 			.. "' does not contain an image in the active frame."
+		-- 	)
+		-- 	return nil
+		-- end
 
 		source_job.metadata = self.config.job_metadata and self.config.job_metadata(settings) or nil
 
@@ -304,6 +320,7 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 			source_job.is_combined,
 			source_job.metadata
 		)
+
 		generated_jobs[#generated_jobs + 1] = source_job
 	end
 	return generated_jobs
@@ -349,7 +366,14 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 	end
 
 	local frame_number = app.frame and app.frame.frameNumber or 1
-	local generated_jobs = self:render_generation_jobs(ordered_layers, frame_number, settings)
+	---@type GenerationJob[]
+	local generated_jobs = {}
+	if settings.generate_all_frames then
+		--TODO: implement generate_all_frames
+	else
+		generated_jobs = self:render_generation_jobs(ordered_layers, frame_number, settings)
+	end
+
 	if not generated_jobs then
 		return
 	end

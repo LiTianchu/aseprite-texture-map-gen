@@ -65,6 +65,7 @@ local dialog = {
 		selected_layers_are_input = true,
 		separate_layers = true,
 		input_layer = "Bottom",
+		generate_all_frames = false,
 		layer_shape = "Convex",
 		edge_strength = 1,
 		normal_max_color_value_levels = 16,

@@ -61,6 +61,7 @@ local function parse_pref_settings(pref)
 		selected_layers_are_input = pref.selected_layers_are_input ~= false,
 		separate_layers = pref.separate_layers ~= false,
 		input_layer = pref.input_layer,
+		generate_all_frames = pref.generate_all_frames ~= false,
 		edge_strength = edge_strength,
 		max_iteration_count = max_iteration_count,
 		input_type = input_type,
@@ -77,6 +78,8 @@ end
 local function sanitize_dialog_settings(data)
 	local selected_layers_are_input = data.selected_layers_are_input
 	local separate_layers = data.separate_layers
+	local input_layer = data.input_layer
+	local generate_all_frames = data.generate_all_frames
 
 	local edge_strength = tonumber(data.edge_strength) or DEFAULT_EDGE_STRENGTH
 	if not TextureMapUtils.valid_strength(edge_strength) then
@@ -117,7 +120,8 @@ local function sanitize_dialog_settings(data)
 	local sanized_dialog_settings = {
 		selected_layers_are_input = selected_layers_are_input,
 		separate_layers = separate_layers,
-		input_layer = data.input_layer,
+		input_layer = input_layer,
+		generate_all_frames = generate_all_frames,
 		edge_strength = edge_strength,
 		max_iteration_count = max_iteration_count,
 		input_type = input_type,
@@ -221,7 +225,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 				hexpand = true,
 			})
 	end,
-	save_dialog_preferences = function(pref, data)
+	save_specific_preferences = function(pref, data)
 		---@cast data HeightMapDialogData
 		pref.input_type = data.input_type
 		pref.height_dump_intermediate_normal_map = data.dump_intermediate_normal_map
@@ -255,6 +259,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 			settings = parse_pref_settings({})
 		end
 
+		--TODO: source might be an empty image, might need extra handling
 		---@cast settings HeightMapGenerationSettings
 		local input_type = metadata and metadata.input_type or settings.input_type
 		local dump_intermediate_normal_map = settings.dump_intermediate_normal_map
@@ -272,6 +277,7 @@ local HeightMapGenerator = TextureMapGenerator.new({
 		end
 
 		local base_name = is_combined and "Combined" or input_layers[1].name
+
 		---@type GenerationJobOutput[]
 		local outputs = {
 			{

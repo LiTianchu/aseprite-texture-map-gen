@@ -115,6 +115,8 @@ assert(
 	dialog.widgets_by_id.height_max_iteration_count.label:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
 	"The iteration input should display its safety cap"
 )
+
+assert(dialog.widgets_by_id.generate_all_frames.selected ~= true, "Generate all frames should be not selectd on start.")
 assert(dialog.widgets_by_id.input_layer.onchange, "The single-layer picker should be selectable")
 assert(
 	dialog.widgets_by_id.height_max_color_value_levels.decimals == 0,
@@ -177,5 +179,8 @@ assert(
 	alert.text:find(tostring(MAX_ITERATION_COUNT_CAP), 1, true),
 	"The cap alert should explain the maximum accepted iteration count"
 )
+
+dialog.widgets_by_id.generate_all_frames.onclick()
+assert(HeightMapGenerator.last_generation == nil, "Enable generating all frames should invalidate regeneration")
 
 print("Height map dialog tests passed")

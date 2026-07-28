@@ -109,26 +109,30 @@ end
 ---@param frame_number integer The Aseprite frame number selected from the layers
 ---@return Image composite_image # The new image with the layers composited onto it
 ---@return boolean cell_valid_for_all_layers # true if all layers have a cel at the frame_number, false otherwise
----@return Layer|nil missing_layer # The first layer that does not have a cel at the frame_number, or nil if all layers have a cel
+---@return Layer[] missing_layers # The layers that does not have a cel at the frame_number
 function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
 	---@diagnostic disable-next-line: param-type-mismatch
 	local source = Image(ref_sprite.width, ref_sprite.height, ColorMode.RGB)
+	local cell_valid_for_all_layers = true
+	local missing_layers = {}
 	for _, layer in ipairs(layers) do
 		local cel = layer:cel(frame_number)
 		if not cel then
-			return source, false, layer
+			cell_valid_for_all_layers = false
+			missing_layers[#missing_layers + 1] = layer
+			-- return source, false, layer
+		else
+			-- render the cel image onto the source image
+			source:drawImage(
+				cel.image,
+				cel.position,
+				math.floor((cel.opacity * layer.opacity) / 255 + 0.5),
+				layer.blendMode
+			)
 		end
-
-		-- render the cel image onto the source image
-		source:drawImage(
-			cel.image,
-			cel.position,
-			math.floor((cel.opacity * layer.opacity) / 255 + 0.5),
-			layer.blendMode
-		)
 	end
 
-	return source, true
+	return source, cell_valid_for_all_layers, missing_layers
 end
 
 ---@param layer_paths string[] The unique image-layer paths, e.g. "Group / Subgroup / Layer"
