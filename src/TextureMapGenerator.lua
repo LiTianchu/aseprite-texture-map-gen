@@ -275,8 +275,9 @@ end
 ---@param ordered_layers Layer[] The ordered input layers to generate from
 ---@param frame_number integer The frame number selected from the ordered_layers input
 ---@param settings GenerationSettings|nil The settings for the generation
+---@param skip_empty_outputs? boolean Whether to skip image processing when every input cel is empty
 ---@return GenerationJob[] generated_jobs The generated jobs with their outputs
-function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number, settings)
+function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number, settings, skip_empty_outputs)
 	if not settings then
 		settings = self.config.parse_pref_settings({})
 	end
@@ -300,7 +301,8 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 
 	local generated_jobs = {}
 	for _, source_job in ipairs(source_jobs) do
-		local source, _, _ = AsepriteLayerUtils.render_layers(self.sprite, source_job.input_layers, frame_number)
+		local source, _, _, has_source_cel =
+			AsepriteLayerUtils.render_layers(self.sprite, source_job.input_layers, frame_number)
 		-- if not has_cel then
 		-- 	AsepriteUIUtils.show_alert(
 		-- 		self.config.title,
@@ -312,17 +314,70 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 		-- end
 
 		source_job.metadata = self.config.job_metadata and self.config.job_metadata(settings) or nil
+		source_job.has_source_cel = has_source_cel
 
-		source_job.outputs = self:create_final_outputs(
-			source,
-			settings,
-			source_job.input_layers,
-			source_job.is_combined,
-			source_job.metadata
-		)
+		if has_source_cel or not skip_empty_outputs then
+			source_job.outputs = self:create_final_outputs(
+				source,
+				settings,
+				source_job.input_layers,
+				source_job.is_combined,
+				source_job.metadata
+			)
+		else
+			source_job.outputs = {}
+		end
 
 		generated_jobs[#generated_jobs + 1] = source_job
 	end
+	return generated_jobs
+end
+
+---Generate each layer job across the sprite timeline, retaining no image for frames with no source cel
+---@param ordered_layers Layer[] The ordered input layers to generate from
+---@param settings GenerationSettings The settings for the generation
+---@return GenerationJob[] generated_jobs The generated jobs with images indexed by frame number
+function TextureMapGenerator:render_all_frames_generation_jobs(ordered_layers, settings)
+	---@type GenerationJob[]
+	local generated_jobs = {}
+
+	for frame_index, frame in ipairs(self.sprite.frames) do
+		local frame_number = frame.frameNumber
+		-- The first frame also supplies output names and keys for jobs whose entire timeline is empty.
+		local frame_jobs =
+			self:render_generation_jobs(ordered_layers, frame_number, settings, frame_index > 1)
+		for job_index, frame_job in ipairs(frame_jobs) do
+			local generated_job = generated_jobs[job_index]
+			if not generated_job then
+				generated_job = {
+					input_layers = frame_job.input_layers,
+					is_combined = frame_job.is_combined,
+					metadata = frame_job.metadata,
+					outputs = {},
+				}
+				for output_index, output in ipairs(frame_job.outputs or {}) do
+					generated_job.outputs[output_index] = {
+						key = output.key,
+						content = {
+							name = output.content.name,
+							image = output.content.image,
+							frame_images = {},
+						},
+					}
+				end
+				generated_jobs[job_index] = generated_job
+			end
+
+			if frame_job.has_source_cel then
+				for output_index, output in ipairs(frame_job.outputs or {}) do
+					local frame_images = generated_job.outputs[output_index].content.frame_images
+					assert(frame_images, "All-frame generation output is missing its frame image registry.")
+					frame_images[frame_number] = output.content.image
+				end
+			end
+		end
+	end
+
 	return generated_jobs
 end
 
@@ -369,7 +424,7 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 	---@type GenerationJob[]
 	local generated_jobs = {}
 	if settings.generate_all_frames then
-		--TODO: implement generate_all_frames
+		generated_jobs = self:render_all_frames_generation_jobs(ordered_layers, settings)
 	else
 		generated_jobs = self:render_generation_jobs(ordered_layers, frame_number, settings)
 	end
@@ -408,13 +463,38 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 			-- create the primary output is first
 			-- any intermediate (dump) outputs are placed between the source and primary output
 			for output_index, output in ipairs(generated_job.outputs) do
+				local output_image = output.content.image
+				local output_frame_number = frame_number
+				if settings.generate_all_frames then
+					output_image = nil
+					output_frame_number = nil
+					local frame_images = output.content.frame_images or {}
+					for _, frame in ipairs(self.sprite.frames) do
+						local candidate = frame_images[frame.frameNumber]
+						if candidate then
+							output_image = candidate
+							output_frame_number = frame.frameNumber
+							break
+						end
+					end
+				end
+
 				local output_layer = AsepriteLayerUtils.create_layer_for_inputs(
 					self.sprite,
 					generated_job.input_layers,
 					output.content.name,
-					output.content.image,
-					frame_number
+					output_image,
+					output_frame_number
 				)
+				if settings.generate_all_frames then
+					local frame_images = output.content.frame_images or {}
+					for _, frame in ipairs(self.sprite.frames) do
+						local generated_image = frame_images[frame.frameNumber]
+						if generated_image and frame.frameNumber ~= output_frame_number then
+							self.sprite:newCel(output_layer, frame.frameNumber, generated_image, Point(0, 0))
+						end
+					end
+				end
 				recorded_outputs[output_index] = {
 					key = output.key,
 					content = {
@@ -454,6 +534,7 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 		sprite = self.sprite,
 		frame_anchors = frame_anchors,
 		jobs = regeneration_jobs,
+		generate_all_frames = settings.generate_all_frames,
 	}
 	self:set_regenerate_available(true)
 
@@ -515,14 +596,23 @@ function TextureMapGenerator:regenerate_last()
 		return
 	end
 
-	local frame_number = find_recorded_frame_number(last_generation.frame_anchors or {})
-	if not frame_number then
-		self:invalidate_regeneration()
-		AsepriteUIUtils.show_alert(
-			self.config.title,
-			"The original frame no longer exists. Generate a new " .. self.config.singular_name .. "."
-		)
-		return
+	---@type integer[]
+	local frame_numbers = {}
+	if last_generation.generate_all_frames then
+		for _, frame in ipairs(last_generation.sprite.frames) do
+			frame_numbers[#frame_numbers + 1] = frame.frameNumber
+		end
+	else
+		local recorded_frame_number = find_recorded_frame_number(last_generation.frame_anchors or {})
+		if not recorded_frame_number then
+			self:invalidate_regeneration()
+			AsepriteUIUtils.show_alert(
+				self.config.title,
+				"The original frame no longer exists. Generate a new " .. self.config.singular_name .. "."
+			)
+			return
+		end
+		frame_numbers[1] = recorded_frame_number
 	end
 
 	local settings, settings_error = self.config.sanitize_dialog_settings(self.dialog_box.data)
@@ -532,45 +622,52 @@ function TextureMapGenerator:regenerate_last()
 	end
 	assert(settings, "Settings provided for regeneration is nil.")
 
-	---@type LayerImagePair[][] # job_update_registry\[job_index\]\[layer_img_update_index\]
+	---@type table[][] # job_update_registry\[job_index\]\[layer_img_update_index\]
 	local job_update_registry = {}
 	for index, job in ipairs(last_generation.jobs) do
-		local source, has_cel, missing_layer =
-			AsepriteLayerUtils.render_layers(last_generation.sprite, job.input_layers, frame_number)
-		if not has_cel and missing_layer then
-			AsepriteUIUtils.show_alert(
-				self.config.title,
-				"Layer '" .. missing_layer.name .. "' does not contain an image in the originally generated frame."
-			)
-			return
-		end
-
-		---@type GenerationJobOutput[]
-		local generated_outputs =
-			self:create_final_outputs(source, settings, job.input_layers, job.is_combined, job.metadata)
-
-		---@type table<string, GenerationJobOutput>
-		local generated_by_key = {}
-		for _, output in ipairs(generated_outputs) do
-			generated_by_key[output.key] = output
-		end
-
-		---@type LayerImagePair[]
+		---@type table[]
 		local updated_layer_imgs_from_job = {}
-		for _, output in ipairs(job.outputs) do
-			local regenerated = generated_by_key[output.key]
-			if not regenerated then
-				self:invalidate_regeneration()
+		for _, frame_number in ipairs(frame_numbers) do
+			local source, has_cel, missing_layers, has_source_cel =
+				AsepriteLayerUtils.render_layers(last_generation.sprite, job.input_layers, frame_number)
+			if not last_generation.generate_all_frames and not has_cel then
+				local missing_layer = missing_layers[1]
 				AsepriteUIUtils.show_alert(
 					self.config.title,
-					"The generated output settings changed. Generate a new " .. self.config.singular_name .. "."
+					"Layer '"
+						.. (missing_layer and missing_layer.name or "Unknown Layer")
+						.. "' does not contain an image in the originally generated frame."
 				)
 				return
 			end
-			updated_layer_imgs_from_job[#updated_layer_imgs_from_job + 1] = {
-				layer = output.content.layer,
-				image = regenerated.content.image,
-			}
+
+			---@type table<string, GenerationJobOutput>
+			local generated_by_key = {}
+			if has_source_cel then
+				---@type GenerationJobOutput[]
+				local generated_outputs =
+					self:create_final_outputs(source, settings, job.input_layers, job.is_combined, job.metadata)
+				for _, output in ipairs(generated_outputs) do
+					generated_by_key[output.key] = output
+				end
+			end
+
+			for _, output in ipairs(job.outputs) do
+				local regenerated = generated_by_key[output.key]
+				if has_source_cel and not regenerated then
+					self:invalidate_regeneration()
+					AsepriteUIUtils.show_alert(
+						self.config.title,
+						"The generated output settings changed. Generate a new " .. self.config.singular_name .. "."
+					)
+					return
+				end
+				updated_layer_imgs_from_job[#updated_layer_imgs_from_job + 1] = {
+					layer = output.content.layer,
+					image = regenerated and regenerated.content.image or nil,
+					frame_number = frame_number,
+				}
+			end
 		end
 		job_update_registry[index] = updated_layer_imgs_from_job
 	end
@@ -581,7 +678,19 @@ function TextureMapGenerator:regenerate_last()
 				if not update.layer then
 					error("Recorded generation output is missing its layer.")
 				end
-				AsepriteLayerUtils.update_layer_image(last_generation.sprite, update.layer, update.image, frame_number)
+				if update.image then
+					AsepriteLayerUtils.update_layer_image(
+						last_generation.sprite,
+						update.layer,
+						update.image,
+						update.frame_number
+					)
+				else
+					local cel = update.layer:cel(update.frame_number)
+					if cel then
+						last_generation.sprite:deleteCel(cel)
+					end
+				end
 			end
 		end
 	end)

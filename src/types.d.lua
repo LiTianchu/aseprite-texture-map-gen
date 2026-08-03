@@ -33,6 +33,7 @@
 
 ---@class NamedLayerImagePair : LayerImagePair
 ---@field public name string The name of the layer
+---@field public frame_images? table<integer, Image> The generated images indexed by frame number
 
 ---@class GenerationJobOutput
 ---@field public key string The unique key identifying the output layer
@@ -43,11 +44,13 @@
 ---@field public is_combined boolean Whether the input layers are combined into a single generation source
 ---@field public metadata table|nil Generator specific metadata retained for regeneration
 ---@field public outputs GenerationJobOutput[]|nil The generated output layers recorded by the job
+---@field public has_source_cel? boolean Whether at least one input layer has a cel in the rendered frame
 
 ---@class GenerationRecord
 ---@field public sprite Sprite The Aseprite sprite containing the generated outputs
 ---@field public frame_anchors LayerCelPair[] The recorded frame anchors for this sprite
 ---@field public jobs GenerationJob[] The recorded generation jobs for this sprite
+---@field public generate_all_frames? boolean Whether the record covers every frame in the sprite
 
 ---@class LayerCelPair
 ---@field public layer Layer The Aseprite layer containing the cel

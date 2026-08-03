@@ -110,11 +110,13 @@ end
 ---@return Image composite_image # The new image with the layers composited onto it
 ---@return boolean cell_valid_for_all_layers # true if all layers have a cel at the frame_number, false otherwise
 ---@return Layer[] missing_layers # The layers that does not have a cel at the frame_number
+---@return boolean has_any_cel # true if at least one layer has a cel at the frame_number
 function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
 	---@diagnostic disable-next-line: param-type-mismatch
 	local source = Image(ref_sprite.width, ref_sprite.height, ColorMode.RGB)
 	local cell_valid_for_all_layers = true
 	local missing_layers = {}
+	local has_any_cel = false
 	for _, layer in ipairs(layers) do
 		local cel = layer:cel(frame_number)
 		if not cel then
@@ -122,6 +124,7 @@ function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
 			missing_layers[#missing_layers + 1] = layer
 			-- return source, false, layer
 		else
+			has_any_cel = true
 			-- render the cel image onto the source image
 			source:drawImage(
 				cel.image,
@@ -132,7 +135,7 @@ function AsepriteLayerUtils.render_layers(ref_sprite, layers, frame_number)
 		end
 	end
 
-	return source, cell_valid_for_all_layers, missing_layers
+	return source, cell_valid_for_all_layers, missing_layers, has_any_cel
 end
 
 ---@param layer_paths string[] The unique image-layer paths, e.g. "Group / Subgroup / Layer"
@@ -173,15 +176,17 @@ end
 ---@param sprite Sprite The Aseprite sprite document to create the layer in
 ---@param input_layer Layer The Aseprite layer to create the new layer above
 ---@param name string The name of the new layer
----@param image Image The image to assign to the new layer's cel
----@param frame_number integer The frame number to assign the new layer's cel to
+---@param image Image|nil The image to assign to the new layer's cel, or nil to create an empty layer
+---@param frame_number integer|nil The frame number to assign the new layer's cel to
 ---@return Layer new_layer # The newly created Aseprite layer in the sprite document
 function AsepriteLayerUtils.create_layer_above(sprite, input_layer, name, image, frame_number)
 	local output_layer = sprite:newLayer()
 	output_layer.name = name
 	output_layer.parent = input_layer.parent
 	output_layer.stackIndex = input_layer.stackIndex + 1
-	sprite:newCel(output_layer, frame_number, image, Point(0, 0))
+	if image and frame_number then
+		sprite:newCel(output_layer, frame_number, image, Point(0, 0))
+	end
 	return output_layer
 end
 
@@ -189,8 +194,8 @@ end
 ---@param sprite Sprite The Aseprite sprite document to create the layer in
 ---@param input_layers Layer[] The Aseprite layers used as reference to create the new layer above
 ---@param name string The name of the new layer
----@param image Image The image to assign to the new layer's cel
----@param frame_number integer The frame number to assign the new layer's cel to
+---@param image Image|nil The image to assign to the new layer's cel, or nil to create an empty layer
+---@param frame_number integer|nil The frame number to assign the new layer's cel to
 ---@return Layer new_layer # The newly created Aseprite layer in the sprite document
 function AsepriteLayerUtils.create_layer_for_inputs(sprite, input_layers, name, image, frame_number)
 	local first_input = input_layers[1]
@@ -224,7 +229,9 @@ function AsepriteLayerUtils.create_layer_for_inputs(sprite, input_layers, name, 
 		output_layer.stackIndex = anchor_layer.stackIndex + 1
 	end
 
-	sprite:newCel(output_layer, frame_number, image, Point(0, 0))
+	if image and frame_number then
+		sprite:newCel(output_layer, frame_number, image, Point(0, 0))
+	end
 	return output_layer
 end
 
