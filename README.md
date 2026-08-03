@@ -2,12 +2,18 @@
 
 All-In-One Image Processing based texture map generator extension for [Aseprite](https://github.com/aseprite/aseprite)  that enables unified and easy 2D texture map creation pipelines.  
 
-**Supported Features:**  
+**Supported Generation Types:**  
 
 - Normal Map Generation
 - Height Map Generation
 - Specular Map Generation (Work In Progress...)
 - Emission Map Generation (Work In Progress...)
+
+**Supported Features:**
+
+- Generate across ALL frame cells of ALL selected layers
+- Combine or separate the generated layers
+- Keep intermediate outputs
 
 <img src="demo/demo.png" alt="Demo" />
 
