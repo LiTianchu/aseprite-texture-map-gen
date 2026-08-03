@@ -260,7 +260,7 @@ end
 ---@param source Image The rendered reference source image for the generation job
 ---@param settings GenerationSettings The sanitized generator settings
 ---@param input_layers Layer[] The input layers used by the generation job
----@param is_combined boolean Whether the inputs were combined into one source
+---@param is_combined boolean Whether the inputs were combined into one source, it is only used for layer name
 ---@param metadata table|nil Generator specific metadata retained for regeneration
 ---@return GenerationJobOutput[] final_outputs The final outputs
 function TextureMapGenerator:create_final_outputs(source, settings, input_layers, is_combined, metadata)
@@ -286,11 +286,13 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 	local source_jobs = {}
 	if settings.selected_layers_are_input and not settings.separate_layers and #ordered_layers > 1 then
 		-- if don't want to separate layers, put every layer into a single job
+		-- number of generation jobs = 1
 		source_jobs[1] = {
 			input_layers = ordered_layers,
 			is_combined = true,
 		}
 	else
+		--number of generation jobs = number of layers
 		for _, input_layer in ipairs(ordered_layers) do
 			source_jobs[#source_jobs + 1] = {
 				input_layers = { input_layer }, -- put a single layer into each job
@@ -317,6 +319,7 @@ function TextureMapGenerator:render_generation_jobs(ordered_layers, frame_number
 		source_job.has_source_cel = has_source_cel
 
 		if has_source_cel or not skip_empty_outputs then
+			-- start texture map generation from the input source
 			source_job.outputs = self:create_final_outputs(
 				source,
 				settings,
@@ -343,10 +346,14 @@ function TextureMapGenerator:render_all_frames_generation_jobs(ordered_layers, s
 
 	for frame_index, frame in ipairs(self.sprite.frames) do
 		local frame_number = frame.frameNumber
-		-- The first frame also supplies output names and keys for jobs whose entire timeline is empty.
-		local frame_jobs =
-			self:render_generation_jobs(ordered_layers, frame_number, settings, frame_index > 1)
+		local frame_jobs = self:render_generation_jobs(ordered_layers, frame_number, settings, frame_index > 1)
+
+		-- iterate through each frame job, each frame job corresponds to one frame in one layer
+		-- if combined, then only one job for that frame
 		for job_index, frame_job in ipairs(frame_jobs) do
+			-- frame job represents one generation job for one specific frame
+			-- generation job is intended to aggregate all the frame jobs in the timeline for a specific layer(or combined layer if combine layer is enbled)
+			-- therefore need to re-build frame generation job
 			local generated_job = generated_jobs[job_index]
 			if not generated_job then
 				generated_job = {
@@ -355,6 +362,7 @@ function TextureMapGenerator:render_all_frames_generation_jobs(ordered_layers, s
 					metadata = frame_job.metadata,
 					outputs = {},
 				}
+
 				for output_index, output in ipairs(frame_job.outputs or {}) do
 					generated_job.outputs[output_index] = {
 						key = output.key,
@@ -365,9 +373,11 @@ function TextureMapGenerator:render_all_frames_generation_jobs(ordered_layers, s
 						},
 					}
 				end
+
 				generated_jobs[job_index] = generated_job
 			end
 
+			-- register the frame images
 			if frame_job.has_source_cel then
 				for output_index, output in ipairs(frame_job.outputs or {}) do
 					local frame_images = generated_job.outputs[output_index].content.frame_images
@@ -378,6 +388,8 @@ function TextureMapGenerator:render_all_frames_generation_jobs(ordered_layers, s
 		end
 	end
 
+	-- returns an aggregated generation job array
+	-- all the generated jobs per each output layer across all frames in the timeline
 	return generated_jobs
 end
 
@@ -479,6 +491,7 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 					end
 				end
 
+				-- allocate the layers for the generated outputs
 				local output_layer = AsepriteLayerUtils.create_layer_for_inputs(
 					self.sprite,
 					generated_job.input_layers,
@@ -486,15 +499,20 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 					output_image,
 					output_frame_number
 				)
+
+				-- fill in the cells
 				if settings.generate_all_frames then
 					local frame_images = output.content.frame_images or {}
 					for _, frame in ipairs(self.sprite.frames) do
 						local generated_image = frame_images[frame.frameNumber]
 						if generated_image and frame.frameNumber ~= output_frame_number then
+							-- aseprite does not automatically create a cel for the frame, so need to allocate a new cel for the generated image
 							self.sprite:newCel(output_layer, frame.frameNumber, generated_image, Point(0, 0))
 						end
 					end
 				end
+
+				-- record the generated output for regeneration
 				recorded_outputs[output_index] = {
 					key = output.key,
 					content = {
@@ -503,6 +521,7 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 						image = output.content.image,
 					},
 				}
+
 				frame_anchors[#frame_anchors + 1] = {
 					layer = output_layer,
 					cel = output_layer:cel(frame_number),
@@ -511,12 +530,14 @@ function TextureMapGenerator:generate_new(input_layers, settings)
 
 			local primary_output_layer = recorded_outputs[1].content.layer
 			output_layers[index] = primary_output_layer
+
 			regeneration_jobs[index] = {
 				input_layers = generated_job.input_layers,
 				is_combined = generated_job.is_combined,
 				metadata = generated_job.metadata,
 				outputs = recorded_outputs,
 			}
+
 			for _, input_layer in ipairs(generated_job.input_layers) do
 				if input_layer == active_input_layer then
 					local next_active_layer =
