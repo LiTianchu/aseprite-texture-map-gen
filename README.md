@@ -1,6 +1,6 @@
 # Aseprite Texture Map Generator Extension
 
-All-In-One Image Processing based texture map generator extension for [Aseprite](https://github.com/aseprite/aseprite)  that enables unified and easy 2D texture map creation pipelines.  
+All-In-One Image Processing based texture map generator extension for [Aseprite](https://github.com/aseprite/aseprite)  that enables unified and easy 2D texture map (e.g. Normal Map, Height Map) creation pipelines. 
 
 **Supported Generation Types:**  
 
